@@ -1,0 +1,22 @@
+/* Create a new file: src/pages/HomePage.css */
+.home-page {
+  font-family: Arial, sans-serif;
+  padding-bottom: 80px; /* Space for the bottom nav */
+}
+
+.hero-section {
+  background-image: url('/path/to/your/background-image.jpg'); /* CHANGE THIS PATH */
+  background-size: cover;
+  background-position: center;
+  min-height: 300px;
+  position: relative;
+}
+
+.main-content {
+  background-color: white;
+  border-radius: 20px 20px 0 0;
+  margin-top: -20px; /* Pulls the content up to overlap with the hero */
+  position: relative;
+  z-index: 5;
+  padding-top: 1rem;
+}

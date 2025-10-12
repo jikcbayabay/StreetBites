@@ -1,0 +1,40 @@
+/* Create a new file: src/components/SearchBar.css */
+.search-container {
+  padding: 1rem;
+  color: white;
+  text-align: left;
+  margin-top: 80px; /* Push below the header */
+}
+
+.search-container h2 {
+  font-size: 1.8rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border-radius: 12px;
+  padding: 0.5rem;
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  flex-grow: 1;
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+.search-bar button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  cursor: pointer;
+}

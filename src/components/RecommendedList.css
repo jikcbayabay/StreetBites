@@ -1,0 +1,35 @@
+/* Create a new file: src/components/RecommendedList.css */
+.recommended-section {
+  padding: 1rem;
+}
+
+.recommended-section h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.recommended-list {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.recommended-item {
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  padding: 1rem;
+  flex-basis: 30%; /* Each item takes up roughly a third of the space */
+  text-align: left;
+}
+
+.recommended-item h3 {
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.item-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #555;
+}
