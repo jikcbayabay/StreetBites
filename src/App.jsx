@@ -22,7 +22,6 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/search/:query" element={<SearchResultsPage />} />
           <Route path="/maps" element={<MapsPage />} />
-          <Route path="/account" element={<AccountPage />} />
           <Route path="/email-settings" element={<EmailSettingsPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
