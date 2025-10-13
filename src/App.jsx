@@ -19,6 +19,8 @@ import UserLogin from './pages/UserLogin';
 import VendorLogin from './pages/VendorLogin';
 import AdminSign from './pages/AdminSignup';
 import UserSign from './pages/UserSignup';
+import VendorDashboard from './pages/VendorDashboard';
+import VendorSignup from './pages/VendorSignup';
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
           <Route path="/user-login" element={<UserLogin />} />
           <Route path="/user-sign" element={<UserSign />} />
           <Route path="/vendor-login" element={<VendorLogin />} />
+          <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route path="/vendor-signup" element={<VendorSignup />} />
         </Routes>
       </BrowserRouter>
     </div>

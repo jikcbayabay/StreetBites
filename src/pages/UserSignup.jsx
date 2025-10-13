@@ -1,9 +1,12 @@
 // src/pages/UserSignup.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import userSignupService from '../services/userSignupService';
 import './LoginPage.css';
 
 const UserSignup = () => {
-  const [step, setStep] = useState(1); // 1 or 2
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -12,8 +15,9 @@ const UserSignup = () => {
     password: ''
   });
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ Inline functions (no imports needed)
+  // Inline functions
   const formatPhoneNumber = (value) => {
     const digits = value.replace(/\D/g, '');
     let formatted = digits;
@@ -36,7 +40,7 @@ const UserSignup = () => {
 
   const normalizeEmail = (email) => email.trim().toLowerCase();
 
-  // ✅ Event handlers
+  // Event handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -73,18 +77,49 @@ const UserSignup = () => {
     if (step === 2) {
       setStep(1);
     } else {
-      window.location.href = '/login';
+      navigate('/login');
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate email
     if (!validateEmail(formData.email)) {
       setErrors({ email: 'Please enter a valid email address' });
       return;
     }
+
+    // Validate password
+    if (formData.password.length < 6) {
+      setErrors({ password: 'Password must be at least 6 characters' });
+      return;
+    }
+
     setErrors({});
-    console.log('User signup data:', formData);
+    setIsLoading(true);
+
+    try {
+      // Call the signup service
+      const userData = await userSignupService.signup({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        contactNumber: formData.contactNumber
+      });
+
+      console.log('Signup successful:', userData);
+      
+      // Redirect to dashboard or home page after successful signup
+      navigate('/home'); // Change to your desired route
+      
+    } catch (error) {
+      console.error('Signup error:', error);
+      setErrors({ general: error.message });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -155,6 +190,12 @@ const UserSignup = () => {
             </form>
           ) : (
             <form className="email-form" onSubmit={handleSubmit} noValidate>
+              {errors.general && (
+                <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  {errors.general}
+                </div>
+              )}
+              
               <div className="form-group">
                 <label htmlFor="email" className="form-label">Email</label>
                 <input
@@ -166,6 +207,7 @@ const UserSignup = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  disabled={isLoading}
                 />
                 {errors.email && <span className="error-message">{errors.email}</span>}
               </div>
@@ -181,11 +223,15 @@ const UserSignup = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  minLength="8"
+                  minLength="6"
+                  disabled={isLoading}
                 />
+                {errors.password && <span className="error-message">{errors.password}</span>}
               </div>
 
-              <button type="submit" className="submit-btn">Create Account</button>
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? 'Creating Account...' : 'Create Account'}
+              </button>
             </form>
           )}
 
