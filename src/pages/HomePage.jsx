@@ -14,13 +14,8 @@ import redTakImage from '../assets/redtak.png';
 import globeLumpiaImage from '../assets/globe.png';
 
 const HomePage = () => {
-  const [viewMode, setViewMode] = useState('mobile');
   const [searchText, setSearchText] = useState('');
   const navigate = useNavigate();
-
-  const toggleViewMode = () => {
-    setViewMode(prevMode => prevMode === 'mobile' ? 'web' : 'mobile');
-  };
 
   const handleSearch = () => {
     if (searchText.trim() !== '') {
@@ -32,7 +27,6 @@ const HomePage = () => {
     navigate(`/search/${categoryName}`);
   };
 
-  // The categories array you noted was missing
   const categories = [
     { name: 'Isaw', image: isawImage },
     { name: 'Barbecue', image: barbecueImage },
@@ -66,10 +60,10 @@ const HomePage = () => {
     homePage: {
       fontFamily: 'Arial, sans-serif',
       paddingBottom: '80px',
-      maxWidth: viewMode === 'web' ? '1200px' : '100vw',
-      margin: viewMode === 'web' ? '0 auto' : '0',
-      backgroundColor: viewMode === 'web' ? 'white' : '#f5f5f5',
-      boxShadow: viewMode === 'web' ? '0 0 40px rgba(0, 0, 0, 0.1)' : 'none',
+      maxWidth: '100vw',
+      margin: '0',
+      backgroundColor: '#f5f5f5',
+      boxShadow: 'none',
       transition: 'all 0.3s ease',
       overflow: 'hidden'
     },
@@ -78,7 +72,7 @@ const HomePage = () => {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      minHeight: viewMode === 'web' ? '500px' : '420px',
+      minHeight: '420px',
       position: 'relative',
       overflow: 'hidden'
     },
@@ -96,52 +90,20 @@ const HomePage = () => {
       alignItems: 'center',
       padding: '12px 16px'
     },
-    headerButtons: {
-      display: 'flex',
-      gap: '8px',
-      alignItems: 'center'
-    },
-    viewToggleButton: {
-      width: '36px',
-      height: '36px',
-      backgroundColor: '#dc2626',
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '18px',
-      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
-      transition: 'all 0.3s',
-      zIndex: 20
-    },
-    userButton: {
-      width: '36px',
-      height: '36px',
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      backdropFilter: 'blur(8px)',
-      borderRadius: '50%',
-      border: 'none',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
     searchSection: {
       position: 'relative',
       zIndex: 20,
-      padding: viewMode === 'web' ? '0 40px' : '0 20px',
-      marginTop: viewMode === 'web' ? '40px' : '20px'
+      padding: '0 20px',
+      marginTop: '20px'
     },
     logo: {
-      fontSize: viewMode === 'web' ? '56px' : '42px',
+      fontSize: '42px',
       fontWeight: 'bold',
       color: 'white',
-      marginBottom: viewMode === 'web' ? '80px' : '50px'
+      marginBottom: '50px'
     },
     searchTitle: {
-      fontSize: viewMode === 'web' ? '28px' : '22px',
+      fontSize: '22px',
       color: 'white',
       fontWeight: '500',
       marginBottom: '20px'
@@ -150,7 +112,7 @@ const HomePage = () => {
       display: 'flex',
       gap: '8px',
       marginBottom: '20px',
-      maxWidth: viewMode === 'web' ? '600px' : '100%'
+      maxWidth: '100%'
     },
     searchInputWrapper: {
       flex: 1,
@@ -158,7 +120,7 @@ const HomePage = () => {
       borderRadius: '24px',
       display: 'flex',
       alignItems: 'center',
-      padding: viewMode === 'web' ? '14px 20px' : '10px 14px',
+      padding: '10px 14px',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
     },
     searchIcon: {
@@ -175,8 +137,8 @@ const HomePage = () => {
       color: '#374151'
     },
     searchButton: {
-      width: viewMode === 'web' ? '52px' : '44px',
-      height: viewMode === 'web' ? '52px' : '44px',
+      width: '44px',
+      height: '44px',
       backgroundColor: '#dc2626',
       borderRadius: '50%',
       border: 'none',
@@ -194,14 +156,14 @@ const HomePage = () => {
       marginTop: '-20px',
       position: 'relative',
       zIndex: 30,
-      padding: viewMode === 'web' ? '40px 40px 60px' : '24px 20px'
+      padding: '24px 20px'
     },
     categoryList: {
       display: 'grid',
-      gridTemplateColumns: viewMode === 'web' ? 'repeat(auto-fit, minmax(120px, 1fr))' : 'repeat(4, 1fr)',
-      gap: viewMode === 'web' ? '24px' : '12px',
-      marginBottom: viewMode === 'web' ? '40px' : '24px',
-      maxWidth: viewMode === 'web' ? '800px' : '100%'
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '12px',
+      marginBottom: '24px',
+      maxWidth: '100%'
     },
     categoryItem: {
       display: 'flex',
@@ -213,14 +175,14 @@ const HomePage = () => {
       padding: '8px 4px'
     },
     categoryIcon: {
-      width: viewMode === 'web' ? '80px' : '56px',
-      height: viewMode === 'web' ? '80px' : '56px',
+      width: '56px',
+      height: '56px',
       backgroundColor: '#f3f4f6',
       borderRadius: '50%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: viewMode === 'web' ? '32px' : '22px',
+      fontSize: '22px',
       marginBottom: '6px',
       transition: 'background-color 0.3s',
       overflow: 'hidden'
@@ -232,18 +194,18 @@ const HomePage = () => {
       objectFit: 'cover'
     },
     categoryName: {
-      fontSize: viewMode === 'web' ? '14px' : '11px',
+      fontSize: '11px',
       color: '#374151',
       textAlign: 'center'
     },
     tagCloud: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: viewMode === 'web' ? '12px' : '8px',
-      marginBottom: viewMode === 'web' ? '32px' : '24px'
+      gap: '8px',
+      marginBottom: '24px'
     },
     tagButton: {
-      padding: viewMode === 'web' ? '10px 18px' : '8px 14px',
+      padding: '8px 14px',
       backgroundColor: 'white',
       border: '1px solid #e5e7eb',
       borderRadius: '20px',
@@ -251,27 +213,27 @@ const HomePage = () => {
       alignItems: 'center',
       gap: '6px',
       cursor: 'pointer',
-      fontSize: viewMode === 'web' ? '15px' : '13px'
+      fontSize: '13px'
     },
     recommendedSection: {
       marginBottom: '20px'
     },
     recommendedTitle: {
-      fontSize: viewMode === 'web' ? '24px' : '18px',
+      fontSize: '18px',
       fontWeight: 'bold',
       color: '#111827',
       marginBottom: '14px'
     },
     recommendedList: {
       display: 'grid',
-      gridTemplateColumns: viewMode === 'web' ? 'repeat(auto-fill, minmax(300px, 1fr))' : '1fr',
-      gap: viewMode === 'web' ? '20px' : '12px'
+      gridTemplateColumns: '1fr',
+      gap: '12px'
     },
     placeCard: {
       display: 'flex',
       alignItems: 'center',
-      gap: viewMode === 'web' ? '16px' : '12px',
-      padding: viewMode === 'web' ? '16px' : '10px',
+      gap: '12px',
+      padding: '10px',
       backgroundColor: 'white',
       border: '1px solid #e5e7eb',
       borderRadius: '12px',
@@ -279,14 +241,14 @@ const HomePage = () => {
       transition: 'box-shadow 0.3s'
     },
     placeImage: {
-      width: viewMode === 'web' ? '100px' : '80px',
-      height: viewMode === 'web' ? '100px' : '80px',
+      width: '80px',
+      height: '80px',
       background: 'linear-gradient(to bottom right, #fee2e2, #fed7aa)',
       borderRadius: '8px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: viewMode === 'web' ? '40px' : '32px',
+      fontSize: '32px',
       flexShrink: 0,
       overflow: 'hidden'
     },
@@ -302,7 +264,7 @@ const HomePage = () => {
       fontWeight: '600',
       color: '#111827',
       marginBottom: '4px',
-      fontSize: viewMode === 'web' ? '16px' : '14px'
+      fontSize: '14px'
     },
     placeDetails: {
       display: 'flex',
@@ -310,7 +272,7 @@ const HomePage = () => {
       gap: '10px'
     },
     placeDistance: {
-      fontSize: viewMode === 'web' ? '14px' : '13px',
+      fontSize: '13px',
       color: '#6b7280'
     },
     placeRating: {
@@ -321,15 +283,13 @@ const HomePage = () => {
     ratingValue: {
       fontWeight: '600',
       color: '#111827',
-      fontSize: viewMode === 'web' ? '14px' : '13px'
+      fontSize: '13px'
     },
     bottomNav: {
       position: 'fixed',
       bottom: 0,
-      left: viewMode === 'web' ? '50%' : 0,
-      right: viewMode === 'web' ? 'auto' : 0,
-      transform: viewMode === 'web' ? 'translateX(-50%)' : 'none',
-      maxWidth: viewMode === 'web' ? '1200px' : '100%',
+      left: 0,
+      right: 0,
       backgroundColor: 'white',
       borderTop: '1px solid #e5e7eb',
       padding: '8px 16px 12px',
@@ -340,9 +300,9 @@ const HomePage = () => {
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
-      maxWidth: viewMode === 'web' ? '600px' : '100%',
+      maxWidth: '100%',
       margin: '0 auto',
-      padding: viewMode === 'web' ? '0 40px' : '0'
+      padding: '0'
     },
     navItem: {
       display: 'flex',
@@ -352,8 +312,8 @@ const HomePage = () => {
       background: 'none',
       border: 'none',
       cursor: 'pointer',
-      padding: viewMode === 'web' ? '8px 20px' : '4px 12px',
-      minWidth: viewMode === 'web' ? '80px' : '60px',
+      padding: '4px 12px',
+      minWidth: '60px',
       transition: 'all 0.3s',
       borderRadius: '8px',
       textDecoration: 'none'
@@ -364,15 +324,6 @@ const HomePage = () => {
     <div style={styles.homePage}>
       <div style={styles.heroSection}>
         <div style={styles.heroOverlay}></div>
-
-        {/* Header */}
-        <div style={styles.header}>
-          <div style={styles.headerButtons}>
-            <button style={styles.viewToggleButton} onClick={toggleViewMode}>
-              {viewMode === 'mobile' ? '🖥️' : '📱'}
-            </button>
-          </div>
-        </div>
 
         {/* Search Section */}
         <div style={styles.searchSection}>
@@ -475,18 +426,17 @@ const HomePage = () => {
               to={item.path}
               style={{
                 ...styles.navItem,
-                color: activeNav === item.id ? '#dc2626' : '#6b7280',
-                backgroundColor: viewMode === 'web' && activeNav === item.id ? '#f9fafb' : 'transparent',
+                color: activeNav === item.id ? '#dc2626' : '#6b7280'
               }}
               onClick={() => setActiveNav(item.id)}
             >
-              <svg style={{width: viewMode === 'web' ? '26px' : '22px', height: viewMode === 'web' ? '26px' : '22px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{width: '22px', height: '22px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {item.id === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>}
                 {item.id === 'maps' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>}
                 {item.id === 'favorites' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>}
                 {item.id === 'profile' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>}
               </svg>
-              <span style={{fontSize: viewMode === 'web' ? '13px' : '11px', fontWeight: '500'}}>{item.label}</span>
+              <span style={{fontSize: '11px', fontWeight: '500'}}>{item.label}</span>
             </Link>
           ))}
         </div>
