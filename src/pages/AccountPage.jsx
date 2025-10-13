@@ -24,7 +24,7 @@ const AccountPage = () => {
           </div>
           <div className="form-group">
             <label className="form-label">Display Name</label>
-            <input type="text" className="form-input" defaultValue="Juan Dela Cruz" />
+              <input type="text" className="form-input" defaultValue="Juan Dela Cruz" />
           </div>
           <div className="form-group">
             <label className="form-label">Username</label>

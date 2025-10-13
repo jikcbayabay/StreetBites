@@ -64,7 +64,7 @@ const LoginPage = () => {
 
           <div className="signup-section">
             <span className="signup-text">
-              Don't have an account? <Link to="/usersignup" className="signup-link">Sign Up</Link>
+              Don't have an account? <Link to="/user-sign" className="signup-link">Sign Up</Link>
             </span>
           </div>
         </main>

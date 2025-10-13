@@ -81,7 +81,7 @@ const AdminLogin = ({ viewMode, onBack, onToggleView }) => {
 
           <div className="signup-section">
             <span className="signup-text">
-              Don't have an account? <a href="/adminsignup" className="signup-link">Sign Up</a>
+              Don't have an account? <a href="/admin-sign" className="signup-link">Sign Up</a>
             </span>
           </div>
         </main>
