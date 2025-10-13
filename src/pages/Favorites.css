@@ -1,0 +1,168 @@
+/* Overall Page Layout */
+.favorites-page-ui {
+  font-family: 'Arial', sans-serif;
+  background-color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #333;
+  width: 100%;
+}
+
+/* Header */
+.favorites-header-ui {
+  background-color: #e53935;
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.back-button-ui {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.back-button-ui svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+}
+
+.header-options-ui span {
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Main Content */
+.favorites-main-ui {
+  padding: 16px;
+}
+
+.loading-message-ui,
+.error-message-ui {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 16px;
+}
+
+.favorites-title-ui {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+
+/* Action Buttons */
+.action-buttons-ui {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.date-guests-button-ui,
+.share-button-ui {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Favorite Image Section */
+.favorite-image-container-ui {
+  position: relative;
+  width: 100%;
+  padding-top: 66.66%; /* 3:2 aspect ratio */
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+}
+
+.favorite-image-ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay-ui {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+}
+
+.heart-icon-ui {
+  color: #e53935;
+  font-size: 20px;
+}
+
+/* Item Details */
+.favorite-details-ui {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.favorite-location-ui {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.favorite-other-details-ui {
+  font-size: 14px;
+  color: #777;
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.rating-ui {
+  margin-left: auto;
+  font-weight: 700;
+  color: #e53935;
+}
+
+/* Add Note Section */
+.add-note-ui {
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  color: #777;
+  font-size: 14px;
+  cursor: text;
+  margin-bottom: 24px;
+}
+
+/* Other Favorites Placeholder */
+.other-favorites-ui {
+  text-align: center;
+  font-style: italic;
+  color: #999;
+}
