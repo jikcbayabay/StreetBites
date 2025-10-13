@@ -12,6 +12,19 @@ const ProfilePage = () => {
     { id: 'profile', label: 'Profile', path: '/profile' }
   ];
 
+  const settingsItems = [
+    { label: 'Account', path: '/account' },
+    { label: 'Language', path: '/language' },
+    { label: 'Email settings', path: '/email-settings' },
+    { label: 'Security', path: '/security' }
+  ];
+
+  const infoItems = [
+    { label: 'FAQ', path: '/faq', external: true },
+    { label: 'Terms of Service', path: '/terms-of-service', external: false },
+    { label: 'Privacy Policy', path: '/privacy-policy', external: false }
+  ];
+
   const bottomNavStyles = {
     position: 'fixed',
     bottom: 0,
@@ -54,7 +67,6 @@ const ProfilePage = () => {
     <div className="profile-page-background">
       <div className="profile-container">
         <header className="profile-header">
-          <button className="collapse-button">^</button>
         </header>
         <section className="user-info-section">
           <img
@@ -69,36 +81,28 @@ const ProfilePage = () => {
           <span className="arrow-icon">{'>'}</span>
         </section>
         <nav className="settings-list">
-          <div className="settings-item">
-            <span>Account</span>
-            <span className="arrow-icon">{'>'}</span>
-          </div>
-          <div className="settings-item">
-            <span>Language</span>
-            <span className="arrow-icon">{'>'}</span>
-          </div>
-          <div className="settings-item">
-            <span>Email settings</span>
-            <span className="arrow-icon">{'>'}</span>
-          </div>
-          <div className="settings-item">
-            <span>Security</span>
-            <span className="arrow-icon">{'>'}</span>
-          </div>
+          {settingsItems.map((item, index) => (
+            <Link 
+              key={index} 
+              to={item.path} 
+              className="settings-item"
+            >
+              <span>{item.label}</span>
+              <span className="arrow-icon">{'>'}</span>
+            </Link>
+          ))}
         </nav>
         <nav className="info-list">
-          <div className="info-item">
-            <span>FAQ</span>
-            <span className="external-link-icon">↗</span>
-          </div>
-          <div className="info-item">
-            <span>Terms of Service</span>
-            <span className="external-link-icon">↗</span>
-          </div>
-          <div className="info-item">
-            <span>Privacy Policy</span>
-            <span className="external-link-icon">↗</span>
-          </div>
+          {infoItems.map((item, index) => (
+            <Link 
+              key={index} 
+              to={item.path} 
+              className="info-item"
+            >
+              <span>{item.label}</span>
+              <span className="external-link-icon">↗</span>
+            </Link>
+          ))}
         </nav>
         <button className="logout-button">Logout</button>
       </div>
