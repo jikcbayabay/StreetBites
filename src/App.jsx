@@ -12,6 +12,7 @@ import FAQPage from './pages/FAQPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import SecurityPage from './pages/SecurityPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
+import Favorites from './pages/Favorites'
 
 function App() {
   return (
@@ -27,6 +28,8 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/favorites" element={<Favorites />} />
         </Routes>
       </BrowserRouter>
     </div>
