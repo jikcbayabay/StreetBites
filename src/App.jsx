@@ -20,6 +20,7 @@ import VendorLogin from './pages/VendorLogin';
 import AdminSign from './pages/AdminSignup';
 import UserSign from './pages/UserSignup';
 import VendorSign from './pages/VendorSignup';
+import VendorDashboard from './pages/VendorDashboard';
 
 function App() {
   return (
@@ -47,6 +48,8 @@ function App() {
           <Route path="/user-sign" element={<UserSign />} />
           <Route path="/vendor-login" element={<VendorLogin />} />
           <Route path="/vendor-signup" element={<VendorSign />} />
+          <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route path="/home" element={<HomePage />} />
         </Routes>
       </BrowserRouter>
     </div>
