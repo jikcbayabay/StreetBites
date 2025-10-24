@@ -1,0 +1,247 @@
+.review-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  min-height: 100vh;
+}
+
+.review-form-card {
+  width: 100%;
+  max-width: 600px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.review-form-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.user-avatar-small {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #eee;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.username {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.location-info {
+  font-size: 14px;
+  color: #777;
+}
+
+.rating-input-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.star-rating-input {
+  display: flex;
+  gap: 5px;
+}
+
+.star-rating-input .star {
+  font-size: 32px;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.2s ease-in-out;
+}
+
+.star-rating-input .star.active {
+  color: #d32323; /* Yelp Red */
+}
+
+.rating-prompt {
+  font-size: 16px;
+  color: #555;
+  font-weight: 500;
+}
+
+.review-of-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 20px 0 15px 0;
+}
+
+.review-textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.review-textarea:focus {
+  outline: none;
+  border-color: #0073bb;
+  box-shadow: 0 0 0 2px rgba(0, 115, 187, 0.2);
+}
+
+.review-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.char-count-info {
+  font-size: 14px;
+  color: #777;
+}
+
+.post-review-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 5px;
+  background-color: #d32323;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.post-review-btn:hover:not(:disabled) {
+  background-color: #a31212;
+}
+
+.post-review-btn:disabled {
+  background-color: #f7baba;
+  cursor: not-allowed;
+}
+
+/* Add this style to your WriteReviewPage.css file */
+
+.review-page-back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
+  z-index: 10;
+}
+
+.review-page-back-button:hover {
+  background-color: #f0f0f0;
+}
+
+/* Add this style to your WriteReviewPage.css file */
+
+.review-page-back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
+  z-index: 10;
+}
+
+.review-page-back-button:hover {
+  background-color: #f0f0f0;
+}
+
+/* Add these new styles to WriteReviewPage.css */
+
+.image-upload-section {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.upload-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #f0f2f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.upload-button:hover {
+  background-color: #e9ecef;
+}
+
+.image-preview-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.remove-image-button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #333;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}

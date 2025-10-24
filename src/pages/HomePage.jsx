@@ -18,14 +18,16 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   const handleSearch = () => {
-    if (searchText.trim() !== '') {
-      navigate(`/search/${searchText}`);
-    }
-  };
+  if (searchText.trim() !== '') {
+    // Converts to lowercase
+    navigate(`/search/${searchText.trim().toLowerCase()}`);
+  }
+};
 
-  const handleCategoryClick = (categoryName) => {
-    navigate(`/search/${categoryName}`);
-  };
+const handleCategoryClick = (categoryName) => {
+  // Converts to lowercase
+  navigate(`/search/${categoryName.toLowerCase()}`);
+};
 
   const categories = [
     { name: 'Isaw', image: isawImage },
@@ -374,7 +376,7 @@ const HomePage = () => {
         {/* Tag Cloud */}
         <div style={styles.tagCloud}>
           {tags.map((tag, idx) => (
-            <button key={idx} style={styles.tagButton}>
+            <button key={idx} style={styles.tagButton} onClick={() => handleCategoryClick(tag.name)}>
               {tag.recent && (
                 <svg style={{width: '14px', height: '14px', color: '#6b7280'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
