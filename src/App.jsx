@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Import all your pages
+// Import all your pages correctly
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import SearchResultsPage from './pages/SearchResultsPage';
@@ -18,33 +18,33 @@ import AdminLogin from './pages/AdminLogin';
 import LoginPage from './pages/LoginPage';
 import UserLogin from './pages/UserLogin';
 import VendorLogin from './pages/VendorLogin';
-import AdminSign from './pages/AdminSignup';
-import UserSign from './pages/UserSignup';
-import VendorSign from './pages/VendorSignup';
+import AdminSignup from './pages/AdminSignup';
+import UserSignup from './pages/UserSignup';
+import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
 import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
-
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
-          {/* Redirect root ("/") to home */}
+          {/* Default redirect */}
           <Route path="/" element={<Navigate to="/home" replace />} />
-          
-          {/* Authentication routes */}
+
+          {/* Authentication */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/admin-sign" element={<AdminSign />} />
+          <Route path="/admin-signup" element={<AdminSignup />} />
           <Route path="/user-login" element={<UserLogin />} />
-          <Route path="/user-sign" element={<UserSign />} />
+          <Route path="/user-signup" element={<UserSignup />} />
           <Route path="/vendor-login" element={<VendorLogin />} />
-          <Route path="/vendor-signup" element={<VendorSign />} />
-          
-          {/* Main app routes */}
+          <Route path="/vendor-signup" element={<VendorSignup />} />
+
+          {/* Main */}
           <Route path="/home" element={<HomePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/search/:category" element={<SearchResultsPage />} />
@@ -53,18 +53,18 @@ function App() {
           <Route path="/menu/:vendorId" element={<MenuPage />} />
           <Route path="/vendor/:vendorId" element={<VendorProfilePage />} />
           <Route path="/vendor/:vendorId/review" element={<WriteReviewPage />} />
-          
-          
-          {/* Settings and info routes */}
+
+          {/* Settings & Info */}
           <Route path="/account" element={<AccountPage />} />
           <Route path="/email-settings" element={<EmailSettingsPage />} />
           <Route path="/security" element={<SecurityPage />} />
           <Route path="/faq" element={<FAQPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-          
-          {/* Vendor dashboard */}
+
+          {/* Dashboards */}
           <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* ✅ Added Admin Dashboard route */}
         </Routes>
       </BrowserRouter>
     </div>
