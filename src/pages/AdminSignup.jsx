@@ -1,9 +1,14 @@
 // src/pages/AdminSignup.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { auth, db } from "../../firebase.js"; 
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import './LoginPage.css';
 
 const AdminSignup = () => {
-  const [step, setStep] = useState(1); // 1 or 2
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -12,8 +17,9 @@ const AdminSignup = () => {
     password: ''
   });
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ Inline utility functions
+  // Utility functions
   const formatPhoneNumber = (value) => {
     const digits = value.replace(/\D/g, '');
     let formatted = digits;
@@ -33,10 +39,8 @@ const AdminSignup = () => {
   };
 
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
-
   const normalizeEmail = (email) => email.trim().toLowerCase();
 
-  // ✅ Event handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -70,21 +74,54 @@ const AdminSignup = () => {
   };
 
   const handleBack = () => {
-    if (step === 2) {
-      setStep(1);
-    } else {
-      window.location.href = '/login';
-    }
+    if (step === 2) setStep(1);
+    else navigate('/login');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!validateEmail(formData.email)) {
       setErrors({ email: 'Please enter a valid email address' });
       return;
     }
+    if (formData.password.length < 8) {
+      setErrors({ password: 'Password must be at least 8 characters' });
+      return;
+    }
+
     setErrors({});
-    console.log('Admin signup data:', formData);
+    setIsLoading(true);
+
+    try {
+      // Create admin account in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      const user = userCredential.user;
+
+      // Save admin data in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        contactNumber: formData.contactNumber,
+        email: formData.email,
+        role: 'admin',
+        createdAt: new Date(),
+      });
+
+      console.log('Admin signup successful:', user.uid);
+
+      navigate('/admin/dashboard'); // redirect after signup
+    } catch (error) {
+      console.error('Admin signup error:', error);
+      setErrors({ general: error.message });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -155,6 +192,12 @@ const AdminSignup = () => {
             </form>
           ) : (
             <form className="email-form" onSubmit={handleSubmit} noValidate>
+              {errors.general && (
+                <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  {errors.general}
+                </div>
+              )}
+
               <div className="form-group">
                 <label htmlFor="email" className="form-label">Email</label>
                 <input
@@ -166,6 +209,7 @@ const AdminSignup = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  disabled={isLoading}
                 />
                 {errors.email && <span className="error-message">{errors.email}</span>}
               </div>
@@ -182,10 +226,14 @@ const AdminSignup = () => {
                   onChange={handleChange}
                   required
                   minLength="8"
+                  disabled={isLoading}
                 />
+                {errors.password && <span className="error-message">{errors.password}</span>}
               </div>
 
-              <button type="submit" className="submit-btn">Create Admin Account</button>
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? 'Creating Admin Account...' : 'Create Admin Account'}
+              </button>
             </form>
           )}
 

@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { auth } from './services/firebase';
 import { onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
-// Import all your pages
+// Import all your pages correctly
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import SearchResultsPage from './pages/SearchResultsPage';
@@ -20,9 +20,9 @@ import AdminLogin from './pages/AdminLogin';
 import LoginPage from './pages/LoginPage';
 import UserLogin from './pages/UserLogin';
 import VendorLogin from './pages/VendorLogin';
-import AdminSign from './pages/AdminSignup';
-import UserSign from './pages/UserSignup';
-import VendorSign from './pages/VendorSignup';
+import AdminSignup from './pages/AdminSignup';
+import UserSignup from './pages/UserSignup';
+import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
 import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
