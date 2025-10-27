@@ -26,6 +26,7 @@ import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AddBusiness from './pages/addBusiness';
 
 function App() {
   return (
@@ -65,6 +66,7 @@ function App() {
           {/* Dashboards */}
           <Route path="/vendor-dashboard" element={<VendorDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* ✅ Added Admin Dashboard route */}
+        <Route path="/add-business" element={<AddBusiness />} /> {/* <-- 2. Add the new route */}
         </Routes>
       </BrowserRouter>
     </div>
