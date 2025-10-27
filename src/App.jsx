@@ -28,6 +28,47 @@ import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUserManagement from './pages/AdminUserManagement';
+import AdminRequests from './pages/AdminRequests';
+import AdminLogs from './pages/AdminLogs'; // ✅ Added AdminLogs import
+
+// Protected Route Component
+const ProtectedRoute = ({ children, isAuthenticated, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+// Public Route Component (redirects to home if already authenticated)
+const PublicRoute = ({ children, isAuthenticated, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  return !isAuthenticated ? children : <Navigate to="/home" replace />;
+};
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -233,9 +274,49 @@ function App() {
             } 
           />
 
-          {/* Dashboards */}
-          <Route path="/vendor-dashboard" element={<VendorDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* ✅ Added Admin Dashboard route */}
+          {/* Protected Vendor dashboard */}
+          <Route 
+            path="/vendor-dashboard" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <VendorDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Protected Admin dashboard routes */}
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin-users" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminUserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin-requests" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminRequests />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin-logs" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminLogs />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </BrowserRouter>
     </div>

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './SearchResults.css';
-import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 import { db } from '../../firebase.js';
 import { collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
 
 // Helper component to render stars
-const StarRating = ({ rating = 0 }) => { // Default rating to 0
+const StarRating = ({ rating = 0 }) => {
   const stars = [];
   for (let i = 1; i <= 5; i++) {
     if (i <= rating) { stars.push(<FaStar key={i} />); }
@@ -51,6 +51,14 @@ const SearchResultsPage = () => {
     };
     fetchVendors();
   }, [category]);
+  
+  const formatReviewCount = (count) => {
+    if (!count || count === 0) return '0';
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1) + 'k';
+    }
+    return count;
+  };
 
   return (
     <div className="search-results-page">
@@ -75,22 +83,25 @@ const SearchResultsPage = () => {
             className={`vendor-card ${index === 1 ? 'highlighted' : ''}`}
             onClick={() => navigate(`/menu/${vendor.id}`)}
           >
-            <img src={vendor.imageUrl} alt={vendor.businessName} className="vendor-image" />
+            <img src={vendor.logoUrl || 'https://via.placeholder.com/150'} alt={vendor.businessName} className="vendor-image" />
             <div className="vendor-details">
               <h2 className="vendor-name">{vendor.businessName}</h2>
               <div className="vendor-rating-info">
-                <StarRating rating={vendor.rating} />
-                <span className="review-count">{vendor.reviewCount} reviews</span>
-              </div>
-              <div className="vendor-actions">
-                <button className="order-button">Menu</button>
+                <StarRating rating={vendor.numericalRating} />
+                <span className="review-count">({formatReviewCount(vendor.reviewCount)} reviews)</span>
               </div>
               <p className="vendor-description">{vendor.description}</p>
-              <a href="#" className="vendor-category-link" onClick={(e) => e.preventDefault()}>
-                {vendor.category}
-              </a>
+              <div className="vendor-meta-bottom">
+                  <span className="vendor-category-link">{vendor.category}</span>
+              </div>
             </div>
-          ))}
+            <div className="vendor-actions">
+              <button className="order-button" onClick={(e) => { e.stopPropagation(); navigate(`/menu/${vendor.id}`); }}>
+                Menu
+              </button>
+            </div>
+          </div>
+        ))}
         </div>
       </main>
     </div>
