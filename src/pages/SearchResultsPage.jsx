@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './SearchResults.css';
 import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaMapMarkerAlt } from 'react-icons/fa';
-
-// Update this path based on where your firebase.js file is located
 import { db } from '../../firebase.js';
 import { collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
 
@@ -25,13 +23,10 @@ const StarRating = ({ rating }) => {
 const SearchResultsPage = () => {
   const { category } = useParams();
   const navigate = useNavigate();
-  
-  // State declarations
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Capitalize the first letter for display
   const displayCategory = category ? category.charAt(0).toUpperCase() + category.slice(1) : '';
 
   useEffect(() => {
@@ -40,25 +35,18 @@ const SearchResultsPage = () => {
 
       setLoading(true);
       setError(null);
-      
+
       try {
-        // 1. Create a reference to the 'vendors' collection
         const vendorsCollectionRef = collection(db, 'vendor_list');
-
-        // 2. Create a query to find vendors where 'category' matches the URL param
         const q = firestoreQuery(vendorsCollectionRef, where("category", "==", category));
-
-        // 3. Execute the query
         const querySnapshot = await getDocs(q);
 
-        // 4. Map the results to an array of vendor objects
         const fetchedVendors = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         }));
-        
-        setVendors(fetchedVendors);
 
+        setVendors(fetchedVendors);
       } catch (err) {
         console.error("Error fetching vendors:", err);
         setError("Could not load vendor data. Please try again later.");
@@ -68,7 +56,7 @@ const SearchResultsPage = () => {
     };
 
     fetchVendors();
-  }, [category]); // Re-run when the category in the URL changes
+  }, [category]);
 
   return (
     <div className="vendors-page">
@@ -87,9 +75,8 @@ const SearchResultsPage = () => {
         )}
 
         {vendors.map((vendor, index) => (
-          // **UPDATED LINE:** Added onClick to navigate to the menu page for the selected vendor.
-          <div 
-            key={vendor.id} 
+          <div
+            key={vendor.id}
             className={`vendor-card ${index === 1 ? 'highlighted' : ''}`}
             onClick={() => navigate(`/menu/${vendor.id}`)}
           >
@@ -107,7 +94,9 @@ const SearchResultsPage = () => {
                 <span className="vendor-distance">{vendor.distance} KM</span>
               </div>
               <p className="vendor-description">{vendor.description}</p>
-              <a href="#" className="vendor-category-link">{vendor.category}</a>
+              <a href="#" className="vendor-category-link" onClick={(e) => e.preventDefault()}>
+                {vendor.category}
+              </a>
             </div>
           </div>
         ))}

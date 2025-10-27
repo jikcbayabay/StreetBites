@@ -1,17 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 const MapsPage = () => {
     const [activeNav, setActiveNav] = useState('maps');
+    const [hoveredNav, setHoveredNav] = useState(null);
+    const [isHoveringLocation, setIsHoveringLocation] = useState(false);
+    const [isHoveringRemove, setIsHoveringRemove] = useState(false);
     const mapRef = useRef(null);
     const [map, setMap] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
     const [locationError, setLocationError] = useState(null);
     const [userMarker, setUserMarker] = useState(null);
     const [isLocating, setIsLocating] = useState(false);
+    const [vendorMarkers, setVendorMarkers] = useState([]);
+    const [vendors, setVendors] = useState([]);
+    const [isMapLoaded, setIsMapLoaded] = useState(false);
 
-    // Replace with your actual Google Maps API key
     const GOOGLE_MAPS_API_KEY = 'AIzaSyAZ9U8zQf_jssNXF0FtBQBp_q8ttV0yRVI';
+
+    useEffect(() => {
+        fetchVendors();
+    }, []);
 
     useEffect(() => {
         if (!window.google) {
@@ -21,12 +32,20 @@ const MapsPage = () => {
             script.defer = true;
             script.onload = () => {
                 initializeMap();
+                setIsMapLoaded(true);
             };
             document.head.appendChild(script);
         } else {
             initializeMap();
+            setIsMapLoaded(true);
         }
     }, []);
+
+    useEffect(() => {
+        if (map && vendors.length > 0 && isMapLoaded) {
+            addVendorMarkers();
+        }
+    }, [map, vendors, isMapLoaded]);
 
     const initializeMap = () => {
         if (mapRef.current) {
@@ -40,10 +59,101 @@ const MapsPage = () => {
                 streetViewControl: false,
                 zoomControl: true,
                 mapTypeId: 'roadmap',
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
             });
 
             setMap(newMap);
         }
+    };
+
+    const fetchVendors = async () => {
+        try {
+            const vendorsCollection = collection(db, 'vendor_list');
+            const vendorSnapshot = await getDocs(vendorsCollection);
+            
+            const vendorData = [];
+            vendorSnapshot.forEach((doc) => {
+                const data = doc.data();
+                vendorData.push({ id: doc.id, ...data });
+            });
+            
+            setVendors(vendorData);
+        } catch (error) {
+            console.error('Error fetching vendors:', error);
+        }
+    };
+
+    const geocodeAddress = async (address) => {
+        return new Promise((resolve, reject) => {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ address: address + ', Manila, Philippines' }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                    const location = {
+                        lat: results[0].geometry.location.lat(),
+                        lng: results[0].geometry.location.lng()
+                    };
+                    resolve(location);
+                } else {
+                    reject(new Error(`Geocoding failed: ${status}`));
+                }
+            });
+        });
+    };
+
+    const addVendorMarkers = async () => {
+        vendorMarkers.forEach(marker => marker.setMap(null));
+        const newMarkers = [];
+
+        for (const vendor of vendors) {
+            try {
+                const location = await geocodeAddress(vendor.address);
+                
+                const marker = new window.google.maps.Marker({
+                    position: location,
+                    map: map,
+                    title: vendor.businessName,
+                    icon: {
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: '#dc2626',
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 2,
+                    },
+                    animation: window.google.maps.Animation.DROP
+                });
+
+                const infoWindow = new window.google.maps.InfoWindow({
+                    content: `<div style="padding: 12px; font-family: Arial, sans-serif;">
+                        <strong style="font-size: 15px; color: #1f2937; display: block; margin-bottom: 6px;">${vendor.businessName}</strong>
+                        <span style="font-size: 13px; color: #6b7280; display: block; margin-bottom: 4px;">${vendor.address}</span>
+                        <span style="font-size: 12px; color: #dc2626; font-weight: 600;">${vendor.category || 'Street Food'}</span>
+                    </div>`
+                });
+
+                marker.addListener('click', () => {
+                    newMarkers.forEach(m => {
+                        if (m.infoWindow) m.infoWindow.close();
+                    });
+                    infoWindow.open(map, marker);
+                    marker.setAnimation(window.google.maps.Animation.BOUNCE);
+                    setTimeout(() => marker.setAnimation(null), 700);
+                });
+
+                marker.infoWindow = infoWindow;
+                newMarkers.push(marker);
+            } catch (error) {
+                console.error(`Error geocoding address for ${vendor.businessName}:`, error);
+            }
+        }
+
+        setVendorMarkers(newMarkers);
     };
 
     const getCurrentLocation = () => {
@@ -65,11 +175,8 @@ const MapsPage = () => {
                 setLocationError(null);
                 setIsLocating(false);
 
-                console.log(`Location found: ${latitude}, ${longitude}`);
-                console.log(`Accuracy: ±${Math.round(accuracy)} meters`);
-
                 if (map) {
-                    map.setCenter(newLocation);
+                    map.panTo(newLocation);
                     map.setZoom(18);
 
                     if (userMarker) {
@@ -98,19 +205,21 @@ const MapsPage = () => {
                         map: map,
                         center: newLocation,
                         radius: accuracy,
-                        fillOpacity: 0,
-                        strokeOpacity: 0,
+                        fillColor: '#4285F4',
+                        fillOpacity: 0.1,
+                        strokeColor: '#4285F4',
+                        strokeOpacity: 0.3,
+                        strokeWeight: 1,
                     });
-
 
                     newMarker.accuracyCircle = accuracyCircle;
                     setUserMarker(newMarker);
 
                     const infoWindow = new window.google.maps.InfoWindow({
-                        content: `<div style="padding: 8px;">
-              <strong>Your Location</strong><br/>
-              <small>Accuracy: ±${Math.round(accuracy)}m</small>
-            </div>`
+                        content: `<div style="padding: 10px; font-family: Arial, sans-serif;">
+                            <strong style="color: #1f2937;">Your Location</strong><br/>
+                            <small style="color: #6b7280;">Accuracy: ±${Math.round(accuracy)}m</small>
+                        </div>`
                     });
 
                     newMarker.addListener('click', () => {
@@ -185,6 +294,7 @@ const MapsPage = () => {
             padding: '12px 16px',
             backgroundColor: 'white',
             borderBottom: '1px solid #e5e7eb',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
         },
         headerLeft: {
             display: 'flex',
@@ -209,25 +319,30 @@ const MapsPage = () => {
         locationButton: {
             position: 'absolute',
             bottom: '100px',
-            left: '16px',
+            right: '16px',
             width: '56px',
             height: '56px',
             backgroundColor: 'white',
             borderRadius: '50%',
             border: 'none',
-            cursor: 'pointer',
+            cursor: isLocating ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             zIndex: 30,
             transition: 'all 0.3s',
-            opacity: isLocating ? 0.6 : 1
+            opacity: isLocating ? 0.6 : 1,
+            transform: isHoveringLocation && !isLocating ? 'scale(1.1)' : 'scale(1)'
+        },
+        locationButtonHover: {
+            backgroundColor: '#f9fafb',
+            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)'
         },
         removeButton: {
             position: 'absolute',
             bottom: '170px',
-            left: '16px',
+            right: '16px',
             width: '56px',
             height: '56px',
             backgroundColor: '#dc2626',
@@ -239,7 +354,12 @@ const MapsPage = () => {
             justifyContent: 'center',
             boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
             zIndex: 30,
-            transition: 'all 0.3s'
+            transition: 'all 0.3s',
+            transform: isHoveringRemove ? 'scale(1.1)' : 'scale(1)'
+        },
+        removeButtonHover: {
+            backgroundColor: '#b91c1c',
+            boxShadow: '0 6px 16px rgba(220, 38, 38, 0.4)'
         },
         bottomNav: {
             position: 'fixed',
@@ -278,25 +398,69 @@ const MapsPage = () => {
         navItemActive: {
             color: '#dc2626'
         },
+        navItemHover: {
+            backgroundColor: '#f9fafb'
+        },
         statusBadge: {
             position: 'absolute',
             top: '80px',
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
             color: 'white',
-            padding: '8px 16px',
-            borderRadius: '20px',
+            padding: '10px 20px',
+            borderRadius: '24px',
             fontSize: '13px',
             zIndex: 25,
-            display: locationError ? 'block' : 'none',
             maxWidth: '80%',
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            animation: 'fadeIn 0.3s ease-in'
+        },
+        loadingContainer: {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 25,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px'
+        },
+        spinner: {
+            width: '40px',
+            height: '40px',
+            border: '4px solid #f3f4f6',
+            borderTop: '4px solid #dc2626',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+        },
+        loadingText: {
+            color: '#6b7280',
+            fontSize: '14px',
+            fontWeight: '500'
         }
     };
 
     return (
         <div style={styles.mapsPage}>
+            <style>
+                {`
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+                        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    }
+                `}
+            </style>
             <div style={styles.header}>
                 <div style={styles.headerLeft}>
                     <span style={styles.breadcrumb}>StreetBites</span>
@@ -307,6 +471,12 @@ const MapsPage = () => {
             </div>
 
             <div style={styles.mapContainer}>
+                {!isMapLoaded && (
+                    <div style={styles.loadingContainer}>
+                        <div style={styles.spinner}></div>
+                        <p style={styles.loadingText}>Loading map...</p>
+                    </div>
+                )}
                 <div ref={mapRef} style={styles.mapElement}></div>
 
                 {locationError && isLocating && (
@@ -317,11 +487,14 @@ const MapsPage = () => {
 
                 {userMarker && (
                     <button
-                        style={styles.removeButton}
+                        style={{
+                            ...styles.removeButton,
+                            ...(isHoveringRemove ? styles.removeButtonHover : {})
+                        }}
                         onClick={removeUserMarker}
+                        onMouseEnter={() => setIsHoveringRemove(true)}
+                        onMouseLeave={() => setIsHoveringRemove(false)}
                         title="Remove location pin"
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
                         <svg
                             style={{ width: '28px', height: '28px', color: 'white' }}
@@ -340,12 +513,15 @@ const MapsPage = () => {
                 )}
 
                 <button
-                    style={styles.locationButton}
+                    style={{
+                        ...styles.locationButton,
+                        ...(isHoveringLocation && !isLocating ? styles.locationButtonHover : {})
+                    }}
                     onClick={getCurrentLocation}
+                    onMouseEnter={() => setIsHoveringLocation(true)}
+                    onMouseLeave={() => setIsHoveringLocation(false)}
                     title="Get current location"
                     disabled={isLocating}
-                    onMouseEnter={(e) => !isLocating && (e.currentTarget.style.transform = 'scale(1.1)')}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
                     <svg
                         style={{
@@ -381,9 +557,12 @@ const MapsPage = () => {
                             to={item.path}
                             style={{
                                 ...styles.navItem,
-                                ...(activeNav === item.id ? styles.navItemActive : {})
+                                ...(activeNav === item.id ? styles.navItemActive : {}),
+                                ...(hoveredNav === item.id ? styles.navItemHover : {})
                             }}
                             onClick={() => setActiveNav(item.id)}
+                            onMouseEnter={() => setHoveredNav(item.id)}
+                            onMouseLeave={() => setHoveredNav(null)}
                         >
                             <svg style={{ width: '24px', height: '24px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 {item.id === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>}

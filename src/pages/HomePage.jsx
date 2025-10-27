@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { auth, db } from '../services/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs } from 'firebase/firestore';
+import { RecommendationEngine } from '../services/recommendationService';
 import heroBg from "../assets/hero-bg1.jpg";
 
 // Import all category images
@@ -8,7 +12,7 @@ import betamaxImage from '../assets/betamax.jpg';
 import isawImage from '../assets/isaw.png';
 import barbecueImage from '../assets/barbecue.png';
 
-// Import the new recommended place images
+// Import the new recommended place images (fallback images)
 import mangLarrysImage from '../assets/MLs.png';
 import redTakImage from '../assets/redtak.png';
 import globeLumpiaImage from '../assets/globe.png';
@@ -17,17 +21,112 @@ const HomePage = () => {
   const [searchText, setSearchText] = useState('');
   const navigate = useNavigate();
 
-  const handleSearch = () => {
-  if (searchText.trim() !== '') {
-    // Converts to lowercase
-    navigate(`/search/${searchText.trim().toLowerCase()}`);
-  }
-};
+  // Auth and Recommendations state
+  const [currentUser, setCurrentUser] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
+  const [activeNav, setActiveNav] = useState('home');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // All vendors state
+  const [allVendors, setAllVendors] = useState([]);
+  const [loadingVendors, setLoadingVendors] = useState(true);
 
-const handleCategoryClick = (categoryName) => {
-  // Converts to lowercase
-  navigate(`/search/${categoryName.toLowerCase()}`);
-};
+  // Interactive states
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [hoveredPlace, setHoveredPlace] = useState(null);
+  const [hoveredVendor, setHoveredVendor] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Listen for auth changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      console.log('Auth state changed:', user?.uid || 'logged out');
+      setCurrentUser(user);
+      setRecommendations([]);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch AI recommendations when user is available
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      setRecommendations([]);
+      
+      if (!currentUser) {
+        console.log('No user logged in, showing default recommendations');
+        setLoadingRecommendations(false);
+        return;
+      }
+      
+      console.log('Fetching AI recommendations for user:', currentUser.uid);
+      setLoadingRecommendations(true);
+      
+      try {
+        const engine = new RecommendationEngine(currentUser.uid);
+        const recs = await engine.getRecommendations(3);
+        console.log('AI Recommendations received:', recs);
+        setRecommendations(recs);
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+        setRecommendations([]);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [currentUser, refreshTrigger]);
+
+  // Fetch all vendors
+  useEffect(() => {
+    const fetchAllVendors = async () => {
+      setLoadingVendors(true);
+      try {
+        const vendorsSnapshot = await getDocs(collection(db, 'vendor_list'));
+        const vendors = vendorsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        console.log('All vendors loaded:', vendors.length);
+        setAllVendors(vendors);
+      } catch (error) {
+        console.error('Error fetching vendors:', error);
+        setAllVendors([]);
+      } finally {
+        setLoadingVendors(false);
+      }
+    };
+
+    fetchAllVendors();
+  }, []);
+
+  const handleSearch = () => {
+    if (searchText.trim() !== '') {
+      navigate(`/search/${searchText.trim().toLowerCase()}`);
+    }
+  };
+
+  const handleCategoryClick = (categoryName) => {
+    navigate(`/search/${categoryName.toLowerCase()}`);
+  };
+
+  const handlePlaceClick = (vendorId) => {
+    navigate(`/menu/${vendorId}`);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    console.log('Manual refresh triggered');
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Add a minimum delay for visual feedback
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  };
 
   const categories = [
     { name: 'Isaw', image: isawImage },
@@ -36,20 +135,11 @@ const handleCategoryClick = (categoryName) => {
     { name: 'Betamax', image: betamaxImage }
   ];
 
-  const tags = [
-    { name: 'takoyaki', trending: true },
-    { name: 'Turon', trending: true },
-    { name: 'Tokwa', recent: true },
-    { name: 'Lumpia', trending: true }
-  ];
-
-  const recommended = [
+  const fallbackRecommended = [
     { name: "Mang Larry's - Dahlia", distance: '0.7km', rating: 4.1, image: mangLarrysImage },
     { name: 'RedTak - Quiapo', distance: '5.3km', rating: 4.7, image: redTakImage },
     { name: 'Globe Lumpia - Raon', distance: '5.1km', rating: 4.3, image: globeLumpiaImage }
   ];
-
-  const [activeNav, setActiveNav] = useState('home');
 
   const navItems = [
     { id: 'home', label: 'Home', path: '/' },
@@ -102,7 +192,8 @@ const handleCategoryClick = (categoryName) => {
       fontSize: '42px',
       fontWeight: 'bold',
       color: 'white',
-      marginBottom: '50px'
+      marginBottom: '50px',
+      animation: 'fadeInDown 0.6s ease-out'
     },
     searchTitle: {
       fontSize: '22px',
@@ -123,13 +214,18 @@ const handleCategoryClick = (categoryName) => {
       display: 'flex',
       alignItems: 'center',
       padding: '10px 14px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+      boxShadow: searchFocused 
+        ? '0 4px 12px rgba(220, 38, 38, 0.3)' 
+        : '0 2px 8px rgba(0, 0, 0, 0.15)',
+      transition: 'all 0.3s ease',
+      transform: searchFocused ? 'scale(1.02)' : 'scale(1)'
     },
     searchIcon: {
       width: '18px',
       height: '18px',
       color: '#9ca3af',
-      marginRight: '10px'
+      marginRight: '10px',
+      transition: 'color 0.3s'
     },
     searchInput: {
       flex: 1,
@@ -150,7 +246,9 @@ const handleCategoryClick = (categoryName) => {
       justifyContent: 'center',
       color: 'white',
       fontSize: '22px',
-      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)'
+      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)',
+      transition: 'all 0.3s',
+      transform: 'scale(1)'
     },
     mainContent: {
       backgroundColor: 'white',
@@ -174,7 +272,8 @@ const handleCategoryClick = (categoryName) => {
       background: 'none',
       border: 'none',
       cursor: 'pointer',
-      padding: '8px 4px'
+      padding: '8px 4px',
+      transition: 'transform 0.3s'
     },
     categoryIcon: {
       width: '56px',
@@ -186,36 +285,21 @@ const handleCategoryClick = (categoryName) => {
       justifyContent: 'center',
       fontSize: '22px',
       marginBottom: '6px',
-      transition: 'background-color 0.3s',
+      transition: 'all 0.3s',
       overflow: 'hidden'
     },
     categoryImage: {
       width: '100%',
       height: '100%',
       borderRadius: '50%',
-      objectFit: 'cover'
+      objectFit: 'cover',
+      transition: 'transform 0.3s'
     },
     categoryName: {
       fontSize: '11px',
       color: '#374151',
-      textAlign: 'center'
-    },
-    tagCloud: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '8px',
-      marginBottom: '24px'
-    },
-    tagButton: {
-      padding: '8px 14px',
-      backgroundColor: 'white',
-      border: '1px solid #e5e7eb',
-      borderRadius: '20px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      cursor: 'pointer',
-      fontSize: '13px'
+      textAlign: 'center',
+      transition: 'color 0.3s'
     },
     recommendedSection: {
       marginBottom: '20px'
@@ -224,7 +308,33 @@ const handleCategoryClick = (categoryName) => {
       fontSize: '18px',
       fontWeight: 'bold',
       color: '#111827',
-      marginBottom: '14px'
+      marginBottom: '14px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    },
+    recommendedTitleLeft: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    },
+    refreshButton: {
+      background: 'white',
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      padding: '6px 12px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: '12px',
+      color: '#6b7280',
+      transition: 'all 0.3s',
+      transform: isRefreshing ? 'rotate(360deg)' : 'rotate(0deg)'
+    },
+    aiIcon: {
+      fontSize: '20px',
+      animation: 'bounce 2s infinite'
     },
     recommendedList: {
       display: 'grid',
@@ -240,7 +350,8 @@ const handleCategoryClick = (categoryName) => {
       border: '1px solid #e5e7eb',
       borderRadius: '12px',
       cursor: 'pointer',
-      transition: 'box-shadow 0.3s'
+      transition: 'all 0.3s ease',
+      transform: 'translateY(0)'
     },
     placeImage: {
       width: '80px',
@@ -252,12 +363,14 @@ const handleCategoryClick = (categoryName) => {
       justifyContent: 'center',
       fontSize: '32px',
       flexShrink: 0,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      transition: 'transform 0.3s'
     },
     placeLogo: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover'
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      transition: 'transform 0.3s'
     },
     placeInfo: {
       flex: 1
@@ -286,6 +399,75 @@ const handleCategoryClick = (categoryName) => {
       fontWeight: '600',
       color: '#111827',
       fontSize: '13px'
+    },
+    loadingText: {
+      textAlign: 'center',
+      color: '#6b7280',
+      fontSize: '14px',
+      padding: '20px'
+    },
+    allVendorsSection: {
+      marginBottom: '20px',
+      marginTop: '32px'
+    },
+    allVendorsTitle: {
+      fontSize: '18px',
+      fontWeight: 'bold',
+      color: '#111827',
+      marginBottom: '14px'
+    },
+    vendorsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      gap: '12px'
+    },
+    vendorCard: {
+      backgroundColor: 'white',
+      border: '1px solid #e5e7eb',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      transform: 'translateY(0)'
+    },
+    vendorCardImage: {
+      width: '100%',
+      height: '120px',
+      objectFit: 'cover',
+      backgroundColor: '#f3f4f6',
+      transition: 'transform 0.3s'
+    },
+    vendorCardContent: {
+      padding: '10px'
+    },
+    vendorCardName: {
+      fontWeight: '600',
+      fontSize: '14px',
+      color: '#111827',
+      marginBottom: '4px',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    },
+    vendorCardCategory: {
+      fontSize: '12px',
+      color: '#6b7280',
+      marginBottom: '6px'
+    },
+    vendorCardFooter: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    },
+    vendorCardRating: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '3px'
+    },
+    vendorCardPrice: {
+      fontSize: '12px',
+      fontWeight: '600',
+      color: '#111827'
     },
     bottomNav: {
       position: 'fixed',
@@ -322,8 +504,125 @@ const handleCategoryClick = (categoryName) => {
     }
   };
 
+  // Dynamic styles for hover effects
+  const getCategoryStyle = (idx) => ({
+    ...styles.categoryItem,
+    transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)'
+  });
+
+  const getCategoryIconStyle = (idx) => ({
+    ...styles.categoryIcon,
+    backgroundColor: hoveredCategory === idx ? '#fee2e2' : '#f3f4f6',
+    boxShadow: hoveredCategory === idx ? '0 4px 12px rgba(220, 38, 38, 0.2)' : 'none'
+  });
+
+  const getPlaceCardStyle = (idx) => ({
+    ...styles.placeCard,
+    boxShadow: hoveredPlace === idx ? '0 8px 16px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+    transform: hoveredPlace === idx ? 'translateY(-4px)' : 'translateY(0)',
+    borderColor: hoveredPlace === idx ? '#dc2626' : '#e5e7eb'
+  });
+
+  const getVendorCardStyle = (idx) => ({
+    ...styles.vendorCard,
+    boxShadow: hoveredVendor === idx ? '0 8px 16px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
+    transform: hoveredVendor === idx ? 'translateY(-4px)' : 'translateY(0)',
+    borderColor: hoveredVendor === idx ? '#dc2626' : '#e5e7eb'
+  });
+
+  // Render recommendations or fallback
+  const renderRecommendations = () => {
+    if (loadingRecommendations) {
+      return <div style={styles.loadingText}>Loading recommendations...</div>;
+    }
+
+    const displayRecommendations = recommendations.length > 0 
+      ? recommendations.map(vendor => ({
+          id: vendor.id,
+          name: vendor.businessName || vendor.name || 'Unknown Vendor',
+          distance: vendor.distance ? `${vendor.distance.toFixed(1)}km` : 'N/A',
+          rating: vendor.rating || 0,
+          image: vendor.imageURL || vendor.imageUrl || vendor.image || mangLarrysImage
+        }))
+      : fallbackRecommended;
+
+    return (
+      <div style={styles.recommendedList}>
+        {displayRecommendations.map((place, idx) => (
+          <div 
+            key={place.id || idx} 
+            style={getPlaceCardStyle(idx)}
+            onMouseEnter={() => setHoveredPlace(idx)}
+            onMouseLeave={() => setHoveredPlace(null)}
+            onClick={() => {
+              if (place.id) {
+                handlePlaceClick(place.id);
+              }
+            }}
+          >
+            <div style={styles.placeImage}>
+              <img 
+                src={place.image} 
+                alt={place.name} 
+                style={{
+                  ...styles.placeLogo,
+                  transform: hoveredPlace === idx ? 'scale(1.1)' : 'scale(1)'
+                }} 
+              />
+            </div>
+            <div style={styles.placeInfo}>
+              <div style={styles.placeName}>{place.name}</div>
+              <div style={styles.placeDetails}>
+                <span style={styles.placeDistance}>{place.distance}</span>
+                <div style={styles.placeRating}>
+                  <svg style={{width: '14px', height: '14px', color: '#fbbf24', fill: '#fbbf24'}} viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                  </svg>
+                  <span style={styles.ratingValue}>{place.rating}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div style={styles.homePage}>
+      <style>
+        {`
+          @keyframes fadeInDown {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes bounce {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-5px);
+            }
+          }
+
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+          }
+        `}
+      </style>
+      
       <div style={styles.heroSection}>
         <div style={styles.heroOverlay}></div>
 
@@ -343,14 +642,29 @@ const handleCategoryClick = (categoryName) => {
                 placeholder="Search"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
                 onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        handleSearch();
-                    }
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
                 }} 
               />
             </div>
-            <button style={styles.searchButton} onClick={handleSearch}>›</button>
+            <button 
+              style={styles.searchButton}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+                e.currentTarget.style.backgroundColor = '#b91c1c';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.backgroundColor = '#dc2626';
+              }}
+              onClick={handleSearch}
+            >
+              ›
+            </button>
           </div>
         </div>
       </div>
@@ -360,62 +674,118 @@ const handleCategoryClick = (categoryName) => {
         {/* Categories */}
         <div style={styles.categoryList}>
           {categories.map((cat, idx) => (
-            <button key={idx} style={styles.categoryItem} onClick={() => handleCategoryClick(cat.name)}>
-              <div style={styles.categoryIcon}>
-                {cat.image ? (
-                  <img src={cat.image} alt={cat.name} style={styles.categoryImage} />
-                ) : (
-                  cat.icon
-                )}
+            <button 
+              key={idx} 
+              style={getCategoryStyle(idx)}
+              onMouseEnter={() => setHoveredCategory(idx)}
+              onMouseLeave={() => setHoveredCategory(null)}
+              onClick={() => handleCategoryClick(cat.name)}
+            >
+              <div style={getCategoryIconStyle(idx)}>
+                <img 
+                  src={cat.image} 
+                  alt={cat.name} 
+                  style={{
+                    ...styles.categoryImage,
+                    transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)'
+                  }} 
+                />
               </div>
-              <div style={styles.categoryName}>{cat.name}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Tag Cloud */}
-        <div style={styles.tagCloud}>
-          {tags.map((tag, idx) => (
-            <button key={idx} style={styles.tagButton} onClick={() => handleCategoryClick(tag.name)}>
-              {tag.recent && (
-                <svg style={{width: '14px', height: '14px', color: '#6b7280'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              )}
-              <span>{tag.name}</span>
-              {tag.trending && (
-                <svg style={{width: '14px', height: '14px', color: '#dc2626'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                </svg>
-              )}
+              <div style={{
+                ...styles.categoryName,
+                color: hoveredCategory === idx ? '#dc2626' : '#374151'
+              }}>
+                {cat.name}
+              </div>
             </button>
           ))}
         </div>
 
         {/* Recommended */}
         <div style={styles.recommendedSection}>
-          <h2 style={styles.recommendedTitle}>Recommended</h2>
-          <div style={styles.recommendedList}>
-            {recommended.map((place, idx) => (
-              <div key={idx} style={styles.placeCard}>
-                <div style={styles.placeImage}>
-                  <img src={place.image} alt={place.name} style={styles.placeLogo} />
-                </div>
-                <div style={styles.placeInfo}>
-                  <div style={styles.placeName}>{place.name}</div>
-                  <div style={styles.placeDetails}>
-                    <span style={styles.placeDistance}>{place.distance}</span>
-                    <div style={styles.placeRating}>
-                      <svg style={{width: '14px', height: '14px', color: '#fbbf24', fill: '#fbbf24'}} viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                      </svg>
-                      <span style={styles.ratingValue}>{place.rating}</span>
+          <h2 style={styles.recommendedTitle}>
+            <div style={styles.recommendedTitleLeft}>
+              {currentUser && recommendations.length > 0 && (
+                <span style={styles.aiIcon}>🤖</span>
+              )}
+              <span>
+                {currentUser && recommendations.length > 0 ? 'Recommended For You' : 'Recommended'}
+              </span>
+            </div>
+            {currentUser && (
+              <button 
+                style={styles.refreshButton}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#dc2626';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.color = '#6b7280';
+                }}
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <svg style={{width: '14px', height: '14px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh
+              </button>
+            )}
+          </h2>
+          {renderRecommendations()}
+        </div>
+
+        {/* All Vendors Section */}
+        <div style={styles.allVendorsSection}>
+          <h2 style={styles.allVendorsTitle}>All Street Food Vendors</h2>
+          {loadingVendors ? (
+            <div style={styles.loadingText}>Loading vendors...</div>
+          ) : allVendors.length > 0 ? (
+            <div style={styles.vendorsGrid}>
+              {allVendors.map((vendor, idx) => (
+                <div
+                  key={vendor.id}
+                  style={getVendorCardStyle(idx)}
+                  onMouseEnter={() => setHoveredVendor(idx)}
+                  onMouseLeave={() => setHoveredVendor(null)}
+                  onClick={() => handlePlaceClick(vendor.id)}
+                >
+                  <img
+                    src={vendor.imageURL || vendor.imageUrl || mangLarrysImage}
+                    alt={vendor.businessName || 'Vendor'}
+                    style={{
+                      ...styles.vendorCardImage,
+                      transform: hoveredVendor === idx ? 'scale(1.1)' : 'scale(1)'
+                    }}
+                  />
+                  <div style={styles.vendorCardContent}>
+                    <div style={styles.vendorCardName}>
+                      {vendor.businessName || 'Unknown Vendor'}
+                    </div>
+                    <div style={styles.vendorCardCategory}>
+                      {vendor.category || 'Street Food'}
+                    </div>
+                    <div style={styles.vendorCardFooter}>
+                      <div style={styles.vendorCardRating}>
+                        <svg style={{width: '14px', height: '14px', color: '#fbbf24', fill: '#fbbf24'}} viewBox="0 0 24 24">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                        </svg>
+                        <span style={{fontSize: '13px', fontWeight: '600'}}>
+                          {vendor.rating || 0}
+                        </span>
+                      </div>
+                      <span style={styles.vendorCardPrice}>
+                        {vendor.priceRange || '₱'}
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div style={styles.loadingText}>No vendors available</div>
+          )}
         </div>
       </main>
 
@@ -428,9 +798,20 @@ const handleCategoryClick = (categoryName) => {
               to={item.path}
               style={{
                 ...styles.navItem,
-                color: activeNav === item.id ? '#dc2626' : '#6b7280'
+                color: activeNav === item.id ? '#dc2626' : '#6b7280',
+                backgroundColor: activeNav === item.id ? '#fee2e2' : 'transparent'
               }}
               onClick={() => setActiveNav(item.id)}
+              onMouseEnter={(e) => {
+                if (activeNav !== item.id) {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeNav !== item.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
             >
               <svg style={{width: '22px', height: '22px'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {item.id === 'home' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>}
