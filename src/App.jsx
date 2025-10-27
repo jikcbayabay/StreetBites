@@ -24,13 +24,13 @@ import AdminSignup from './pages/AdminSignup';
 import UserSignup from './pages/UserSignup';
 import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminUserManagement from './pages/AdminUserManagement';
-import AdminRequests from './pages/AdminRequests';
-import AdminLogs from './pages/AdminLogs';
 import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUserManagement from './pages/AdminUserManagement';
+import AdminRequests from './pages/AdminRequests';
+import AdminLogs from './pages/AdminLogs'; // ✅ Added AdminLogs import
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAuthenticated, isLoading }) => {
@@ -284,7 +284,7 @@ function App() {
             } 
           />
 
-          {/* Protected Admin dashboard and management routes */}
+          {/* Protected Admin dashboard routes */}
           <Route 
             path="/admin-dashboard" 
             element={
@@ -294,7 +294,7 @@ function App() {
             } 
           />
           <Route 
-            path="/admin-user-management" 
+            path="/admin-users" 
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
                 <AdminUserManagement />
