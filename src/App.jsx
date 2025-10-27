@@ -24,6 +24,10 @@ import AdminSignup from './pages/AdminSignup';
 import UserSignup from './pages/UserSignup';
 import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUserManagement from './pages/AdminUserManagement';
+import AdminRequests from './pages/AdminRequests';
+import AdminLogs from './pages/AdminLogs';
 import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
@@ -133,7 +137,7 @@ function App() {
             path="/admin-sign" 
             element={
               <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminSign />
+                <AdminSignup />
               </PublicRoute>
             } 
           />
@@ -141,7 +145,7 @@ function App() {
             path="/user-sign" 
             element={
               <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <UserSign />
+                <UserSignup />
               </PublicRoute>
             } 
           />
@@ -149,7 +153,7 @@ function App() {
             path="/vendor-signup" 
             element={
               <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <VendorSign />
+                <VendorSignup />
               </PublicRoute>
             } 
           />
@@ -276,6 +280,40 @@ function App() {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
                 <VendorDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Protected Admin dashboard and management routes */}
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin-user-management" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminUserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin-requests" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminRequests />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin-logs" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminLogs />
               </ProtectedRoute>
             } 
           />
