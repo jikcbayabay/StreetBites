@@ -144,7 +144,7 @@ const MenuPage = () => {
       {showPopup && <div className="favorite-popup">{popupMessage}</div>}
 
       <header className="menu-header">
-        <button onClick={() => navigate(-1)} className="back-button"><FaArrowLeft /></button>
+       <button onClick={() => navigate('/')} className="back-button"><FaArrowLeft /></button>
         <div className="vendor-name-title-clickable" onClick={() => navigate(`/vendor/${vendor.id}`)}>
           <h1>{vendor.businessName}</h1>
         </div>

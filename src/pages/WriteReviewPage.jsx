@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaArrowLeft } from 'react-icons/fa';
 import { db, auth } from '../../firebase.js';
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from "firebase/auth";
@@ -109,6 +109,7 @@ const WriteReviewPage = () => {
                 userId: currentUser.uid,
                 reviewerName: fullName, // Use the constructed full name
                 reviewerAvatarUrl: currentUser.photoURL || "/default-avatar.png",
+                reviewerLocation: userProfile.location || "Philippines",
                 rating: rating,
                 text: reviewText,
                 tags: selectedTags,
@@ -139,6 +140,10 @@ const WriteReviewPage = () => {
             <div className="review-content-wrapper">
                 {/* --- Left Column: Main Form --- */}
                 <div className="review-main-form">
+                    <button className="review-page-back-button" onClick={() => navigate(`/vendor/${vendorId}`)}>
+                        <FaArrowLeft /> Back to Profile
+                    </button>
+
                     <div className="form-vendor-header">
                         <img src={vendor.logoUrl || 'https://via.placeholder.com/80'} alt={vendor.businessName} className="vendor-avatar" />
                         <div className="vendor-info">
