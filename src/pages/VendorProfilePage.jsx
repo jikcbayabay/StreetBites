@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaCheckCircle, FaBookOpen } from 'react-icons/fa';
 import { db } from '../../firebase.js';
 import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import './VendorProfilePage.css';
@@ -110,7 +110,7 @@ const VendorProfilePage = () => {
   return (
     <div className="profile-page-container">
       <header className="profile-hero">
-        <button className="profile-back-button" onClick={() => navigate(-1)}>
+        <button className="profile-back-button" onClick={() => navigate(`/menu/${vendorId}`)}>
             <FaArrowLeft />
         </button>
         <div className="hero-gallery">
@@ -154,6 +154,9 @@ const VendorProfilePage = () => {
               <button className="btn btn-primary" onClick={() => navigate(`/vendor/${vendor.id}/review`)}>
                 <FaStar /> Write a review
               </button>
+              <button className="btn btn-secondary" onClick={() => navigate(`/menu/${vendor.id}`)}>
+                <FaBookOpen /> View Menu
+              </button>
             </div>
             <div className="location-section card-style">
               <div className="location-address">
@@ -191,8 +194,8 @@ const VendorProfilePage = () => {
                     <div className="reviewer-profile">
                       <img src={review.reviewerAvatarUrl || 'https://via.placeholder.com/50'} alt={review.reviewerName} className="reviewer-avatar" />
                       <div className="reviewer-meta">
-                        <span className="reviewer-name">{review.reviewerName}</span>
-                        <span className="reviewer-location">{review.reviewerLocation || 'Buellton, CA'}</span>
+                        <span className="reviewer-name">{review.reviewerName || 'Anonymous'}</span>
+                        {review.reviewerLocation && <span className="reviewer-location">{review.reviewerLocation}</span>}
                       </div>
                     </div>
                     <div className="review-content">
