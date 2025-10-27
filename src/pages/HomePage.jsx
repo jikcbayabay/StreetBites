@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { RecommendationEngine } from '../services/recommendationService';
 import heroBg from "../assets/hero-bg1.jpg";
 
@@ -16,6 +16,43 @@ import barbecueImage from '../assets/barbecue.png';
 import mangLarrysImage from '../assets/MLs.png';
 import redTakImage from '../assets/redtak.png';
 import globeLumpiaImage from '../assets/globe.png';
+
+// Helper function to calculate vendor rating
+const calculateVendorRating = async (vendorId) => {
+  try {
+    const reviewsSnap = await getDocs(
+      query(
+        collection(db, 'reviews'),
+        where('vendorId', '==', vendorId)
+      )
+    );
+
+    if (reviewsSnap.empty) {
+      return { rating: 0, reviewCount: 0 };
+    }
+
+    let totalRating = 0;
+    let count = 0;
+
+    reviewsSnap.forEach(doc => {
+      const reviewData = doc.data();
+      if (reviewData.rating && typeof reviewData.rating === 'number') {
+        totalRating += reviewData.rating;
+        count++;
+      }
+    });
+
+    const averageRating = count > 0 ? parseFloat((totalRating / count).toFixed(1)) : 0;
+    
+    return {
+      rating: averageRating,
+      reviewCount: count
+    };
+  } catch (error) {
+    console.error(`Error calculating rating for vendor ${vendorId}:`, error);
+    return { rating: 0, reviewCount: 0 };
+  }
+};
 
 const HomePage = () => {
   const [searchText, setSearchText] = useState('');
@@ -80,18 +117,43 @@ const HomePage = () => {
     fetchRecommendations();
   }, [currentUser, refreshTrigger]);
 
-  // Fetch all vendors
+  // Fetch all vendors with ratings
   useEffect(() => {
     const fetchAllVendors = async () => {
       setLoadingVendors(true);
       try {
+        // Fetch vendors
         const vendorsSnapshot = await getDocs(collection(db, 'vendor_list'));
         const vendors = vendorsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        console.log('All vendors loaded:', vendors.length);
-        setAllVendors(vendors);
+
+        console.log(`Fetching ratings for ${vendors.length} vendors...`);
+
+        // Enrich with ratings in batches
+        const batchSize = 10;
+        const enrichedVendors = [];
+        
+        for (let i = 0; i < vendors.length; i += batchSize) {
+          const batch = vendors.slice(i, i + batchSize);
+          
+          const enrichedBatch = await Promise.all(
+            batch.map(async (vendor) => {
+              const { rating, reviewCount } = await calculateVendorRating(vendor.id);
+              return {
+                ...vendor,
+                rating,
+                reviewCount
+              };
+            })
+          );
+          
+          enrichedVendors.push(...enrichedBatch);
+        }
+
+        console.log('All vendors loaded with ratings:', enrichedVendors.length);
+        setAllVendors(enrichedVendors);
       } catch (error) {
         console.error('Error fetching vendors:', error);
         setAllVendors([]);

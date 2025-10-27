@@ -3,11 +3,8 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: #f9f9f9;
   min-height: 100vh;
-<<<<<<< HEAD
-=======
   width: 100%;
   margin: 0;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
 }
 
 /* Header */
@@ -33,14 +30,7 @@
   border-radius: 50%;
   display: flex;
   align-items: center;
-<<<<<<< HEAD
-  justify-content: center;
-}
-.back-button:hover {
-  background-color: #f0f0f0;
-=======
   padding: 0;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
 }
 
 .header-title {
@@ -48,8 +38,6 @@
   font-weight: 700;
   color: #2d2e2f;
   margin: 0;
-<<<<<<< HEAD
-=======
 }
 
 /* Vendor List */
@@ -61,28 +49,12 @@
 }
 
 .message {
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
   text-align: center;
   flex-grow: 1;
 }
 
-<<<<<<< HEAD
-/* Main Content Container */
-.search-results-container {
-  width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 20px;
-}
-
-.vendors-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-=======
 .message.error {
   color: #c0392b;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
 }
 
 /* Vendor Card */
@@ -90,44 +62,6 @@
   background-color: #fff;
   display: flex;
   padding: 20px;
-<<<<<<< HEAD
-  border: 1px solid #e6e6e6;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: box-shadow 0.2s ease;
-}
-
-.vendor-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.vendor-image-container {
-  width: 150px;
-  height: 150px;
-  flex-shrink: 0;
-  margin-right: 20px;
-}
-
-.vendor-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.vendor-details {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.vendor-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0073bb;
-  margin: 0;
-=======
   border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -169,7 +103,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
 }
 
 .vendor-rating-info {
@@ -179,12 +112,8 @@
 }
 
 .star-rating {
-<<<<<<< HEAD
-  color: #d32323; /* Yelp Red */
-=======
   display: flex;
   color: #ffc107;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
   font-size: 1rem;
 }
 
@@ -194,9 +123,6 @@
 
 .review-count {
   font-size: 0.9rem;
-<<<<<<< HEAD
-  color: #70757a;
-=======
   color: #777;
   margin-left: 8px;
 }
@@ -208,31 +134,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
 }
 
 .vendor-meta {
   display: flex;
   align-items: center;
-<<<<<<< HEAD
-  gap: 8px;
-  font-size: 0.9rem;
-  color: #2d2e2f;
-}
-
-.dot-separator { font-weight: bold; color: #ccc; }
-.status-text { color: #d32323; font-weight: 500; }
-
-.vendor-description {
-  font-size: 0.9rem;
-  color: #70757a;
-  margin: 4px 0;
-  line-height: 1.5;
-}
-
-.vendor-description a {
-  color: #0073bb;
-=======
   font-size: 0.95rem;
   margin: 8px 0;
 }
@@ -269,7 +175,6 @@
 .vendor-category-link {
   color: #007bff;
   font-size: 0.95rem;
->>>>>>> 52dcf26d9c7e9dbd783c3dc8a21e5f66035b4435
   text-decoration: none;
   font-weight: 500;
   margin-top: auto;
