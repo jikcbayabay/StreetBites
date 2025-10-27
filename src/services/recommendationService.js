@@ -13,6 +13,36 @@ export class RecommendationEngine {
       lastRecommendations: [],
       lastRecommendationsTime: null
     };
+    // Per-vendor rating cache to avoid repeated reviews scans.
+    // In-memory and instance-scoped; TTL controls staleness (default 24h).
+    this.vendorRatingsCache = new Map();
+    this.VENDOR_RATING_TTL_MS = 24 * 60 * 60 * 1000;
+    // Max concurrent rating calculations when enriching vendors
+    this.RATING_CONCURRENCY = 10;
+    // Default settings (weights, TTLs, debug, etc.) — configurable per-instance
+    this.settings = {
+      weights: {
+        collaborative: 0.35,
+        content: 0.30,
+        popularity: 0.20,
+        location: 0.10,
+        contextual: 0.05
+      },
+      randomness: {
+        // keep randomness small relative to weighted scores (0-100 scale)
+        newUserMax: 8,
+        lowDataMax: 6,
+        normalMax: 2
+      },
+      vendorRatingTTL: this.VENDOR_RATING_TTL_MS,
+      vendorCacheDuration: this.cache.CACHE_DURATION,
+      ratingConcurrency: this.RATING_CONCURRENCY,
+      debug: false
+    };
+    // short helper for debug logging
+    this.log = (...args) => {
+      if (this.settings.debug) console.log('[RecommendationEngine]', ...args);
+    };
   }
 
   async getRecommendations(maxResults = 10, options = {}) {
@@ -222,137 +252,180 @@ export class RecommendationEngine {
   }
 
   async scoreVendors(candidates, userProfile, allVendors, isNewUser) {
+    // New modular scoring pipeline
     const scores = [];
     const similarUsers = isNewUser ? [] : await this.findSimilarUsers(userProfile);
 
+    // Precompute any global state once
+    const weights = this.settings.weights;
+
     for (const vendor of candidates) {
-      let score = 0;
       const reasons = [];
       const features = {};
 
-      // Track if vendor has low data
-      const reviewCount = vendor.reviewCount || 0;
-      const hasLowData = reviewCount < 5;
-
-      // 1. Collaborative Filtering (35% weight)
+      // Collaborative
+      let collabScore = 0;
       if (!isNewUser && similarUsers.length > 0) {
-        const collaborativeScore = await this.getCollaborativeScore(vendor.id, similarUsers);
-        if (collaborativeScore > 0) {
-          const weightedScore = collaborativeScore * 0.35;
-          score += weightedScore;
-          features.collaborative = collaborativeScore;
-          if (collaborativeScore > 50) {
-            reasons.push('Popular among users with similar taste');
-          }
+        collabScore = await this.scoreCollaborative(vendor, similarUsers);
+        if (collabScore > 0) {
+          reasons.push('Popular among users with similar taste');
+          features.collaborative = collabScore;
         }
       }
 
-      // 2. Content-Based Filtering (30% weight)
-      const category = vendor.category || 'Other';
-      const categoryWeight = userProfile.categories.get(category) || 0;
-      if (categoryWeight > 0) {
-        const categoryScore = Math.min(categoryWeight * 10, 30);
-        score += categoryScore;
-        features.categoryMatch = categoryWeight;
-        reasons.push(`You love ${category}`);
+      // Content-based
+      const contentResult = this.scoreContentBased(vendor, userProfile);
+      if (contentResult.score > 0) {
+        reasons.push(...contentResult.reasons);
+        Object.assign(features, contentResult.features);
       }
 
-      const priceRange = vendor.priceRange || 'medium';
-      const priceWeight = userProfile.priceRanges.get(priceRange) || 0;
-      if (priceWeight > 0) {
-        const priceScore = Math.min(priceWeight * 5, 15);
-        score += priceScore;
-        features.priceMatch = priceWeight;
+      // Popularity & quality
+      const popScore = this.scorePopularity(vendor);
+      if (popScore.score > 0) {
+        reasons.push(...popScore.reasons);
+        features.popularity = popScore.score;
       }
 
-      // Cuisine matching
-      if (vendor.cuisine) {
-        const cuisineWeight = userProfile.cuisines.get(vendor.cuisine) || 0;
-        if (cuisineWeight > 0) {
-          score += Math.min(cuisineWeight * 5, 10);
-          features.cuisineMatch = cuisineWeight;
-        }
+      // Location
+      const locResult = this.scoreLocation(vendor);
+      if (locResult.score > 0) {
+        reasons.push(...locResult.reasons);
+        features.location = locResult.score;
       }
 
-      // 3. Popularity & Quality (20% weight)
-      const popularityScore = this.getPopularityScore(vendor);
-      score += popularityScore * 0.2;
-      features.popularity = popularityScore;
-      
-      const rating = vendor.rating || 0;
-      if (rating >= 4.7) {
-        reasons.push('Exceptional ratings (4.7+★)');
-      } else if (rating >= 4.5) {
-        reasons.push('Highly rated');
-      } else if (hasLowData && rating === 0) {
-        reasons.push('New - be the first to try!');
+      // Contextual
+      const ctxResult = this.scoreContextual(vendor, userProfile);
+      if (ctxResult.score > 0) {
+        reasons.push(...ctxResult.reasons);
+        features.contextual = ctxResult.score;
       }
 
-      // 4. Location Score (10% weight)
-      const distance = vendor.distance || 5;
-      const locationScore = this.getLocationScore(distance);
-      score += locationScore * 0.1;
-      features.location = locationScore;
-      
-      if (distance < 1) {
-        reasons.push('Very close by');
-      } else if (distance < 3) {
-        reasons.push('Nearby');
+      // Random / exploration boost
+      const randomBoost = this.scoreRandomness(vendor, isNewUser);
+      if (randomBoost > 0) {
+        features.random = randomBoost;
       }
 
-      // 5. Context-Aware Bonuses (5% total)
-      const contextBonus = this.getContextualBonus(vendor, userProfile);
-      score += contextBonus;
-      features.contextual = contextBonus;
-
-      if (contextBonus > 5) {
-        if (this.userContext.weather === 'rainy' && category === 'Comfort Food') {
-          reasons.push('Perfect for rainy weather');
-        }
-        if (this.userContext.time === 'breakfast' && vendor.hasBreakfast) {
-          reasons.push('Great breakfast options');
-        }
+      // Boost for vendors not recently recommended
+      let noveltyBoost = 0;
+      if (this.cache.lastRecommendations && !this.cache.lastRecommendations.includes(vendor.id)) {
+        noveltyBoost = 3;
+        reasons.push('Not recently recommended');
       }
 
-      // 6. Freshness Boost
-      if (vendor.isNew === true) {
-        score += 5;
-        reasons.push('New vendor - give them a try!');
-      }
+      // Aggregate using configurable weights and small normalizations
+      const totalScore = (collabScore * weights.collaborative) +
+                         (contentResult.score * weights.content) +
+                         (popScore.score * weights.popularity) +
+                         (locResult.score * weights.location) +
+                         (ctxResult.score * weights.contextual) +
+                         randomBoost +
+                         noveltyBoost;
 
-      // 7. Trending Boost
-      if (vendor.isTrending === true) {
-        score += 8;
-        reasons.push('Trending now');
-      }
-
-      // 8. Increased randomization, especially for low-data vendors
-      let randomBoost;
-      if (isNewUser) {
-        randomBoost = Math.random() * 10;
-      } else if (hasLowData) {
-        randomBoost = Math.random() * 20;
-      } else {
-        randomBoost = Math.random() * 5;
-      }
-      score += randomBoost;
-
-      // 9. Boost for vendors that haven't been recommended recently
-      if (this.cache.lastRecommendations && 
-          !this.cache.lastRecommendations.includes(vendor.id)) {
-        score += 3;
-      }
+      // Ensure readable reasons (unique, up to 4)
+      const uniqueReasons = Array.from(new Set(reasons)).slice(0, 4);
 
       scores.push({
         vendorId: vendor.id,
-        score,
-        reasons: reasons.slice(0, 3),
+        score: totalScore,
+        reasons: uniqueReasons,
         features,
-        hasLowData
+        hasLowData: (vendor.reviewCount || 0) < 5
       });
     }
 
     return scores;
+  }
+
+  // ------------------ Modular Scoring Methods ------------------
+  async scoreCollaborative(vendor, similarUsers) {
+    try {
+      const raw = await this.getCollaborativeScore(vendor.id, similarUsers);
+      // normalize to 0-100
+      return Math.min(raw, 100);
+    } catch (e) {
+      this.log('collab error', e);
+      return 0;
+    }
+  }
+
+  scoreContentBased(vendor, userProfile) {
+    const features = {};
+    const reasons = [];
+    let score = 0;
+
+    const category = vendor.category || 'Other';
+    const categoryWeight = userProfile.categories.get(category) || 0;
+    if (categoryWeight > 0) {
+      const categoryScore = Math.min(categoryWeight * 10, 30);
+      score += categoryScore;
+      features.categoryMatch = categoryWeight;
+      reasons.push(`Based on your past orders: ${category}`);
+    }
+
+    const priceRange = vendor.priceRange || 'medium';
+    const priceWeight = userProfile.priceRanges.get(priceRange) || 0;
+    if (priceWeight > 0) {
+      const priceScore = Math.min(priceWeight * 5, 15);
+      score += priceScore;
+      features.priceMatch = priceWeight;
+    }
+
+    if (vendor.cuisine) {
+      const cuisineWeight = userProfile.cuisines.get(vendor.cuisine) || 0;
+      if (cuisineWeight > 0) {
+        const cuisineScore = Math.min(cuisineWeight * 5, 10);
+        score += cuisineScore;
+        features.cuisineMatch = cuisineWeight;
+        reasons.push(`Matches cuisine: ${vendor.cuisine}`);
+      }
+    }
+
+    return { score, reasons, features };
+  }
+
+  scorePopularity(vendor) {
+    const reasons = [];
+    // getPopularityScore returns a 0-100-ish metric (rating+review influence)
+    const pop = Math.max(0, this.getPopularityScore(vendor));
+    if (pop > 0) {
+      const rating = vendor.rating || 0;
+      if (rating >= 4.7) reasons.push('Exceptional ratings (4.7+★)');
+      else if (rating >= 4.5) reasons.push('Highly rated');
+      else if ((vendor.reviewCount || 0) === 0) reasons.push('New - be the first to try!');
+    }
+    // Return popularity on 0-100 scale to match other components
+    return { score: Math.min(pop, 100), reasons };
+  }
+
+  scoreLocation(vendor) {
+    const reasons = [];
+    const distance = vendor.distance || 5;
+    const locScore = this.getLocationScore(distance); // 0-100
+    if (distance < 1) reasons.push('Very close by');
+    else if (distance < 3) reasons.push('Nearby');
+    return { score: Math.min(locScore, 100), reasons };
+  }
+
+  scoreContextual(vendor, userProfile) {
+    const reasons = [];
+    const bonus = this.getContextualBonus(vendor, userProfile); // small integer bonuses (e.g., 0-15)
+    if (bonus > 0) {
+      if (this.userContext.weather === 'rainy' && (vendor.category || '') === 'Comfort Food') reasons.push('Perfect for rainy weather');
+      if (this.userContext.time === 'breakfast' && vendor.hasBreakfast) reasons.push('Great breakfast options');
+    }
+    // Scale contextual bonus roughly to 0-100. We assume bonus seldom exceeds ~15; scale factor chosen conservatively.
+    const scaled = Math.min(bonus * 6, 100);
+    return { score: scaled, reasons };
+  }
+
+  scoreRandomness(vendor, isNewUser) {
+    const reviewCount = vendor.reviewCount || 0;
+    const r = this.settings.randomness;
+    // Randomness should be small relative to 0-100 component scores; return value in 0-10 range.
+    const max = isNewUser ? r.newUserMax : (reviewCount < 5 ? r.lowDataMax : r.normalMax);
+    return Math.random() * max;
   }
 
   shuffleSimilarScores(sortedVendors, maxResults) {
@@ -470,6 +543,10 @@ export class RecommendationEngine {
     const cuisineCounts = new Map();
     const maxPerCategory = Math.ceil(maxResults / 3);
 
+    // Protect the top N vendors from being demoted by diversity rules
+    const preserveTopN = Math.min(3, maxResults);
+    const topVendorIds = new Set(scoredVendors.slice(0, preserveTopN).map(sv => sv.vendorId));
+
     for (const sv of scoredVendors) {
       const vendor = allVendors.find(v => v.id === sv.vendorId);
       if (!vendor) continue;
@@ -480,14 +557,20 @@ export class RecommendationEngine {
       const categoryCount = categoryCounts.get(category) || 0;
       const cuisineCount = cuisine ? (cuisineCounts.get(cuisine) || 0) : 0;
 
-      if (categoryCount < maxPerCategory && cuisineCount < maxPerCategory) {
+      // If vendor is in the protected top set, always include without demotion
+      if (topVendorIds.has(sv.vendorId)) {
+        selected.push(sv);
+        categoryCounts.set(category, categoryCount + 1);
+        if (cuisine) cuisineCounts.set(cuisine, cuisineCount + 1);
+      } else if (categoryCount < maxPerCategory && cuisineCount < maxPerCategory) {
         selected.push(sv);
         categoryCounts.set(category, categoryCount + 1);
         if (cuisine) {
           cuisineCounts.set(cuisine, cuisineCount + 1);
         }
       } else {
-        selected.push({ ...sv, score: sv.score * 0.7 });
+        // demote but keep the vendor in the pool
+        selected.push({ ...sv, score: sv.score * 0.85 });
       }
 
       if (selected.length >= maxResults * 2) break;
@@ -503,9 +586,18 @@ export class RecommendationEngine {
     const exploitRecommendations = sortedVendors.slice(0, exploitCount);
 
     const topVendorIds = new Set(sortedVendors.slice(0, exploitCount).map(sv => sv.vendorId));
-    const unexplored = sortedVendors.filter(sv => !topVendorIds.has(sv.vendorId));
 
-    const exploratory = this.weightedRandomSample(unexplored, exploratoryCount);
+    // Build unexplored pool from the full candidate list (allCandidates) so exploration
+    // can surface vendors that weren't in the top-scored slice.
+    const unexploredCandidates = allCandidates
+      .filter(v => !topVendorIds.has(v.id))
+      .map(v => {
+        // find scored entry if present to get a weight, otherwise assign a small base score
+        const scored = sortedVendors.find(sv => sv.vendorId === v.id);
+        return scored ? { ...scored } : { vendorId: v.id, score: (v.rating || 0) + 1 };
+      });
+
+    const exploratory = this.weightedRandomSample(unexploredCandidates, exploratoryCount);
 
     exploratory.forEach(sv => {
       sv.reasons = ['Recommended for you to explore', ...sv.reasons];
@@ -521,11 +613,13 @@ export class RecommendationEngine {
     const remaining = [...items];
 
     for (let i = 0; i < count && remaining.length > 0; i++) {
-      const totalWeight = remaining.reduce((sum, item) => sum + item.score, 0);
+      // Ensure minimum positive weight so low-scoring items have a chance
+      const totalWeight = remaining.reduce((sum, item) => sum + Math.max(1, item.score), 0);
       let random = Math.random() * totalWeight;
 
       for (let j = 0; j < remaining.length; j++) {
-        random -= remaining[j].score;
+        const w = Math.max(1, remaining[j].score);
+        random -= w;
         if (random <= 0) {
           sampled.push(remaining[j]);
           remaining.splice(j, 1);
@@ -846,26 +940,54 @@ export class RecommendationEngine {
 
   // NEW: Enrich vendors with calculated ratings
   async enrichVendorsWithRatings(vendors) {
-    console.log(`Enriching ${vendors.length} vendors with ratings...`);
-    
-    const batchSize = 10;
+    console.log(`Enriching ${vendors.length} vendors with ratings (cache ttl ${this.VENDOR_RATING_TTL_MS}ms)...`);
+
+    const batchSize = this.RATING_CONCURRENCY || 10;
     const enrichedVendors = [];
-    
-    for (let i = 0; i < vendors.length; i += batchSize) {
-      const batch = vendors.slice(i, i + batchSize); 
-      const ratingPromises = batch.map(vendor => 
+    const toCompute = [];
+
+    // Short-circuit vendors that already have rating/reviewCount or use cached values
+    for (const vendor of vendors) {
+      if (vendor.rating !== undefined && vendor.reviewCount !== undefined) {
+        enrichedVendors.push(vendor);
+        continue;
+      }
+
+      const cached = this.vendorRatingsCache.get(vendor.id);
+      if (cached && (Date.now() - cached.ts) < this.VENDOR_RATING_TTL_MS) {
+        enrichedVendors.push({ ...vendor, rating: cached.rating, reviewCount: cached.reviewCount });
+        continue;
+      }
+
+      toCompute.push(vendor);
+    }
+
+    // Compute missing ratings in limited-concurrency batches
+    for (let i = 0; i < toCompute.length; i += batchSize) {
+      const batch = toCompute.slice(i, i + batchSize);
+      const ratingPromises = batch.map(vendor =>
         this.calculateVendorRating(vendor.id)
-          .then(ratingData => ({
-            ...vendor,
-            rating: ratingData.rating,
-            reviewCount: ratingData.reviewCount
-          }))
-      );      
+          .then(ratingData => {
+            const enriched = { ...vendor, rating: ratingData.rating, reviewCount: ratingData.reviewCount };
+            try {
+              this.vendorRatingsCache.set(vendor.id, { rating: ratingData.rating, reviewCount: ratingData.reviewCount, ts: Date.now() });
+            } catch (e) {
+              // best-effort caching; don't fail enrichment on cache errors
+              console.warn('Failed to cache vendor rating for', vendor.id, e);
+            }
+            return enriched;
+          })
+          .catch(err => {
+            console.error(`Error enriching vendor ${vendor.id}:`, err);
+            return { ...vendor, rating: 0, reviewCount: 0 };
+          })
+      );
+
       const ratedVendors = await Promise.all(ratingPromises);
       enrichedVendors.push(...ratedVendors);
-      console.log(`Processed batch ${i / batchSize + 1}: ${ratedVendors.length} vendors enriched.`);
+      console.log(`Processed rating batch ${i / batchSize + 1}: ${ratedVendors.length} vendors enriched.`);
     }
-    
+
     return enrichedVendors;
   }
 

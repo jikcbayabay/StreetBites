@@ -51,25 +51,25 @@
 /* Location Button */
 .maps-location-button {
   position: absolute;
-  bottom: 100px;
+  bottom: 120px;
   right: 16px;
   width: 48px;
   height: 48px;
   background-color: white;
-  border-radius: 50%;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
   z-index: 30;
   transition: all 0.2s ease-in-out;
 }
 
 .maps-location-button:hover {
   background-color: #f9fafb;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
   transform: scale(1.05);
 }
 
@@ -95,6 +95,25 @@
   padding: 8px 16px 12px;
   z-index: 40;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Small utility overrides for Google Maps control groups to avoid overlaps */
+.gm-style .gm-top-right {
+  /* push built-in top-right controls down and in a bit */
+  margin-top: 12px !important;
+  margin-right: 12px !important;
+}
+
+.gm-style .gm-bottom-left,
+.gm-style .gm-bottom-right {
+  /* reserve space above the bottom nav so controls don't sit on top of it */
+  margin-bottom: 140px !important;
+}
+
+.gm-style .gm-control-active,
+.gm-style .gm-bundled-control {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border-radius: 8px;
 }
 
 .maps-nav-container {
