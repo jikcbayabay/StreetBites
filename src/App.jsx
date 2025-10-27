@@ -26,6 +26,9 @@ import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUserManagement from './pages/AdminUserManagement';
+import AdminRequests from './pages/AdminRequests';
+import AdminLogs from './pages/AdminLogs'; // ✅ Added AdminLogs import
 
 function App() {
   return (
@@ -64,7 +67,10 @@ function App() {
 
           {/* Dashboards */}
           <Route path="/vendor-dashboard" element={<VendorDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* ✅ Added Admin Dashboard route */}
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin-user-management" element={<AdminUserManagement />} />
+          <Route path="/admin-requests" element={<AdminRequests />} />
+          <Route path="/admin-logs" element={<AdminLogs />} /> {/* ✅ Added Admin Logs route */}
         </Routes>
       </BrowserRouter>
     </div>
