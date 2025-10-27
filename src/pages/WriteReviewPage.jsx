@@ -109,6 +109,7 @@ const WriteReviewPage = () => {
                 userId: currentUser.uid,
                 reviewerName: fullName, // Use the constructed full name
                 reviewerAvatarUrl: currentUser.photoURL || "/default-avatar.png",
+                reviewerLocation: userProfile.location || "Philippines",
                 rating: rating,
                 text: reviewText,
                 tags: selectedTags,
