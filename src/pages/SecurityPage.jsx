@@ -1,12 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../services/firebase';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import './ProfilePage.css';
 
 const SecurityPage = () => {
   const navigate = useNavigate();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert('Please fill in all password fields');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      
+      // Re-authenticate user before changing password
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        currentPassword
+      );
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, newPassword);
+
+      alert('Password updated successfully!');
+      
+      // Clear form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error('Error updating password:', error);
+      if (error.code === 'auth/wrong-password') {
+        alert('Current password is incorrect');
+      } else {
+        alert('Failed to update password: ' + error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBack = () => {
     navigate('/profile');
+  };
+
+  const handleCancel = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   return (
@@ -20,26 +80,50 @@ const SecurityPage = () => {
           <h2 className="section-title">Security Settings</h2>
           <div className="form-group">
             <label className="form-label">Current Password</label>
-            <input type="password" className="form-input" placeholder="Enter current password" />
+            <input 
+              type="password" 
+              className="form-input" 
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
           </div>
           <div className="form-group">
             <label className="form-label">New Password</label>
-            <input type="password" className="form-input" placeholder="Enter new password" />
+            <input 
+              type="password" 
+              className="form-input" 
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
           </div>
           <div className="form-group">
             <label className="form-label">Confirm Password</label>
-            <input type="password" className="form-input" placeholder="Confirm new password" />
+            <input 
+              type="password" 
+              className="form-input" 
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
-          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e8e8e8' }}>
-            <h3 className="section-title" style={{ marginTop: 0, marginBottom: '1rem' }}>Two-Factor Authentication</h3>
-            <div className="toggle-switch" style={{ borderBottom: 'none' }}>
-              <span className="toggle-label">Enable 2FA</span>
-              <input type="checkbox" className="toggle-checkbox" />
-            </div>
-          </div>
+
           <div className="button-group">
-            <button className="btn-primary">Update Password</button>
-            <button className="btn-secondary">Cancel</button>
+            <button 
+              className="btn-primary"
+              onClick={handleUpdatePassword}
+              disabled={loading}
+            >
+              {loading ? 'Updating...' : 'Update Password'}
+            </button>
+            <button 
+              className="btn-secondary"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { auth } from './services/firebase';
+import { onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
 // Import all your pages correctly
 import HomePage from './pages/HomePage';
@@ -26,47 +28,214 @@ import MenuPage from './pages/MenuPage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import WriteReviewPage from './pages/WriteReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
-import AddBusiness from './pages/addBusiness';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Set Firebase to only persist authentication for the current session
+    // This will clear authentication when the browser tab/window is closed
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        console.log('Session persistence set');
+      })
+      .catch((error) => {
+        console.error('Error setting persistence:', error);
+      });
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/home" replace />} />
+          {/* Redirect root ("/") to login page */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          
+          {/* Public Authentication routes - redirect to home if already logged in */}
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <LoginPage />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/admin-login" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminLogin />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/user-login" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <UserLogin />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/vendor-login" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <VendorLogin />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/admin-sign" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AdminSignup />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/user-sign" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <UserSignup />
+              </PublicRoute>
+            } 
+          />
+          <Route 
+            path="/vendor-signup" 
+            element={
+              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <VendorSignup />
+              </PublicRoute>
+            } 
+          />
 
-          {/* Authentication */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/admin-signup" element={<AdminSignup />} />
-          <Route path="/user-login" element={<UserLogin />} />
-          <Route path="/user-signup" element={<UserSignup />} />
-          <Route path="/vendor-login" element={<VendorLogin />} />
-          <Route path="/vendor-signup" element={<VendorSignup />} />
+          {/* Protected Main app routes - require authentication */}
+          <Route 
+            path="/home" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <HomePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/search/:category" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <SearchResultsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/maps" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <MapsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/favorites" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <Favorites />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/menu/:vendorId" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <MenuPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/vendor/:vendorId" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <VendorProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/vendor/:vendorId/review" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <WriteReviewPage />
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* Main */}
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/search/:category" element={<SearchResultsPage />} />
-          <Route path="/maps" element={<MapsPage />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/menu/:vendorId" element={<MenuPage />} />
-          <Route path="/vendor/:vendorId" element={<VendorProfilePage />} />
-          <Route path="/vendor/:vendorId/review" element={<WriteReviewPage />} />
-
-          {/* Settings & Info */}
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/email-settings" element={<EmailSettingsPage />} />
-          <Route path="/security" element={<SecurityPage />} />
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+          {/* Protected Settings and info routes */}
+          <Route 
+            path="/account" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <AccountPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/email-settings" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <EmailSettingsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/security" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <SecurityPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/faq" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <FAQPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/privacy-policy" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <PrivacyPolicyPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/terms-of-service" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+                <TermsOfServicePage />
+              </ProtectedRoute>
+            } 
+          />
 
           {/* Dashboards */}
           <Route path="/vendor-dashboard" element={<VendorDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* ✅ Added Admin Dashboard route */}
-        <Route path="/add-business" element={<AddBusiness />} /> {/* <-- 2. Add the new route */}
         </Routes>
       </BrowserRouter>
     </div>

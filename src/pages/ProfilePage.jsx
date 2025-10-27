@@ -1,22 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { auth } from '../services/firebase';
+import { signOut } from 'firebase/auth';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
   const [activeNav, setActiveNav] = useState('profile');
-  const navigate = useNavigate(); // for redirecting to LoginPage
+  const [currentUser, setCurrentUser] = useState(null);
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Optional: clear user session data
-    localStorage.removeItem('user');
-    sessionStorage.clear();
+  useEffect(() => {
+    // Get current user info from Firebase Auth
+    const user = auth.currentUser;
+    if (user) {
+      setCurrentUser({
+        displayName: user.displayName || 'User',
+        email: user.email,
+        photoURL: user.photoURL,
+        username: user.email ? user.email.split('@')[0] : 'user'
+      });
+    }
+  }, []);
 
-    // Redirect to LoginPage
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Sign out from Firebase
+      await signOut(auth);
+      
+      // Optional: clear any additional local data
+      localStorage.removeItem('user');
+      sessionStorage.clear();
+
+      // Redirect to LoginPage
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      alert('Failed to logout. Please try again.');
+    }
   };
 
   const navItems = [
-    { id: 'home', label: 'Home', path: '/' },
+    { id: 'home', label: 'Home', path: '/home' },
     { id: 'maps', label: 'Maps', path: '/maps' },
     { id: 'favorites', label: 'Favorites', path: '/favorites' },
     { id: 'profile', label: 'Profile', path: '/profile' }
@@ -24,7 +48,6 @@ const ProfilePage = () => {
 
   const settingsItems = [
     { label: 'Account', path: '/account' },
-    { label: 'Language', path: '/language' },
     { label: 'Email settings', path: '/email-settings' },
     { label: 'Security', path: '/security' }
   ];
@@ -72,6 +95,16 @@ const ProfilePage = () => {
     textDecoration: 'none'
   };
 
+  // Generate initials for placeholder image
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return parts[0][0] + parts[1][0];
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className="profile-page-background">
       <div className="profile-container">
@@ -79,13 +112,16 @@ const ProfilePage = () => {
 
         <section className="user-info-section">
           <img
-            src="https://placehold.co/60x60/F9A8D4/A90C6B?text=JD"
-            alt="Juan Dela Cruz"
+            src={
+              currentUser?.photoURL || 
+              `https://placehold.co/60x60/F9A8D4/A90C6B?text=${getInitials(currentUser?.displayName)}`
+            }
+            alt={currentUser?.displayName || 'User'}
             className="profile-picture"
           />
           <div className="user-details">
-            <span className="user-name">Juan Dela Cruz</span>
-            <span className="user-handle">@JD.CRUZ</span>
+            <span className="user-name">{currentUser?.displayName || 'User'}</span>
+            <span className="user-handle">@{currentUser?.username || 'user'}</span>
           </div>
           <span className="arrow-icon">{'>'}</span>
         </section>
