@@ -108,14 +108,16 @@ const AdminDashboard = () => {
   };
 
   const handleNavigation = (tab) => {
-    if (tab === 'users') {
-      navigate('/admin-user-management');
+    if (tab === 'overview') {
+      navigate('/admin-dashboard');
+    } else if (tab === 'users') {
+      navigate('/admin-users');
+    } else if (tab === 'vendors') {
+      navigate('/admin-vendors');
     } else if (tab === 'admin-requests') {
       navigate('/admin-requests');
     } else if (tab === 'logs') {
       navigate('/admin-logs');
-    } else {
-      setActiveTab(tab);
     }
   };
 

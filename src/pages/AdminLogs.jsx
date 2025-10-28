@@ -183,7 +183,9 @@ const AdminLogs = () => {
     if (tab === 'overview') {
       navigate('/admin-dashboard');
     } else if (tab === 'users') {
-      navigate('/admin-user-management');
+      navigate('/admin-users');
+    } else if (tab === 'vendors') {
+      navigate('/admin-vendors');
     } else if (tab === 'admin-requests') {
       navigate('/admin-requests');
     } else if (tab === 'logs') {

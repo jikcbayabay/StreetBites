@@ -322,30 +322,16 @@ const AdminUserManagement = () => {
   };
 
   const handleNavigation = (tab) => {
-    switch(tab) {
-      case 'overview':
-        navigate('/admin-dashboard');
-        break;
-      case 'vendors':
-        navigate('/admin-dashboard');
-        break;
-      case 'reviews':
-        navigate('/admin-dashboard');
-        break;
-      case 'analytics':
-        navigate('/admin-dashboard');
-        break;
-      case 'admin-requests':
-        navigate('/admin-requests');
-        break;
-      case 'logs':
-        navigate('/admin-logs');
-        break;
-      case 'settings':
-        navigate('/admin-dashboard');
-        break;
-      default:
-        break;
+    if (tab === 'overview') {
+      navigate('/admin-dashboard');
+    } else if (tab === 'users') {
+      navigate('/admin-users');
+    } else if (tab === 'vendors') {
+      navigate('/admin-vendors');
+    } else if (tab === 'admin-requests') {
+      navigate('/admin-requests');
+    } else if (tab === 'logs') {
+      navigate('/admin-logs');
     }
   };
 
