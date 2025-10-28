@@ -1,0 +1,98 @@
+/* VendorSignup.css - Add this to your ProfilePage.css or create as separate file */
+
+/* ===== VENDOR SIGNUP PAGE ===== */
+.vendor-signup-page .header-title {
+  color: white;
+}
+
+.vendor-signup-page .content-section {
+  padding: 2rem 1.5rem;
+  flex-grow: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.vendor-signup-page .section-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 2rem;
+  position: relative;
+  padding-bottom: 1rem;
+  letter-spacing: -0.5px;
+}
+
+.vendor-signup-page .section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #E84C3D, #E85C4D);
+  border-radius: 2px;
+}
+
+.vendor-description {
+  color: #6b7280;
+  margin-bottom: 2rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.vendor-loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.vendor-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: block;
+  font-weight: 500;
+}
+
+.vendor-submit-error {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #fee2e2;
+  border-radius: 12px;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-size: 0.9375rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.vendor-help-section {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: #6b7280;
+}
+
+.vendor-help-link {
+  color: #E84C3D;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.vendor-help-link:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vendor-signup-page .section-title {
+    font-size: 1.5rem;
+  }
+
+  .vendor-signup-page .content-section {
+    padding: 1.5rem 1rem;
+  }
+}

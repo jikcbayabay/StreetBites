@@ -1,14 +1,15 @@
 // src/pages/VendorSignup.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../services/firebase';
 import vendorSignupService from '../services/vendorSignupService';
-import './LoginPage.css';
+import './VendorSignup.css';
 
 const VendorSignup = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1 or 2
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [formData, setFormData] = useState({
-    email: '',
     businessName: '',
     address: '',
     operatingHours: ''
@@ -16,58 +17,45 @@ const VendorSignup = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Validate email
-  const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
-
-  // Normalize email
-  const normalizeEmail = (email) => email.trim().toLowerCase();
+  // Check authentication on component mount
+  useEffect(() => {
+    const user = auth.currentUser;
+    console.log('Current authenticated user:', user);
+    
+    if (user) {
+      setCurrentUser({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName
+      });
+    } else {
+      console.error('No authenticated user found');
+      setErrors({ auth: 'You must be logged in to apply as a vendor' });
+    }
+    
+    setIsCheckingAuth(false);
+  }, []);
 
   // Event handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === 'email') {
-      const normalized = normalizeEmail(value);
-      setFormData((prev) => ({ ...prev, email: normalized }));
-
-      if (validateEmail(normalized)) {
-        setErrors((prev) => ({ ...prev, email: '' }));
-      }
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleNextStep1 = (e) => {
-    e.preventDefault();
-    
-    const newErrors = {};
-    
-    if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    
-    setErrors({});
-    setStep(2);
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleBack = () => {
-    if (step === 2) {
-      setStep(1);
-    } else {
-      navigate('/login');
-    }
+    navigate('/profile');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate Step 2 fields
+    // Check if user is authenticated
+    if (!currentUser) {
+      setErrors({ auth: 'You must be logged in to apply as a vendor' });
+      return;
+    }
+    
+    // Validate fields
     const newErrors = {};
     
     if (!formData.businessName.trim()) {
@@ -91,9 +79,10 @@ const VendorSignup = () => {
     setIsLoading(true);
     
     try {
-      // Call the vendor application service
+      // Call the vendor application service with UID
       const result = await vendorSignupService.applyAsVendor({
-        email: formData.email,
+        uid: currentUser.uid,
+        email: currentUser.email,
         businessName: formData.businessName,
         address: formData.address,
         operatingHours: formData.operatingHours
@@ -101,8 +90,11 @@ const VendorSignup = () => {
       
       console.log('Vendor application successful:', result);
       
-      // Redirect to vendor dashboard or success page
-      navigate('/vendor-dashboard');
+      // Show success message
+      alert('Application submitted successfully! You will be notified once approved.');
+      
+      // Redirect back to profile
+      navigate('/profile');
       
     } catch (error) {
       console.error('Vendor application error:', error);
@@ -114,148 +106,125 @@ const VendorSignup = () => {
     }
   };
 
-  return (
-    <div className="login-page">
-      <div className="login-wrapper">
-        <div className="login-hero">
-          <button className="back-btn" onClick={handleBack} disabled={isLoading}>
-            ← Back
-          </button>
-          <h1 className="logo-title">Apply as Vendor</h1>
-          <p className="logo-subtitle">
-            {step === 1 ? 'Verify Your Account' : 'Business Information'}
-          </p>
-          <p className="hero-description">
-            {step === 1
-              ? 'Enter the email address associated with your existing user account to continue.'
-              : 'Tell us about your business. Your application will be reviewed by our team for approval.'}
-          </p>
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="profile-page-background">
+        <div className="profile-container">
+          <div className="vendor-loading">
+            <p>Loading...</p>
+          </div>
         </div>
+      </div>
+    );
+  }
 
-        <main className="login-content">
-          {/* Step 1: Email Verification */}
-          {step === 1 && (
-            <form className="email-form" onSubmit={handleNextStep1} noValidate>
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  className="form-input"
-                  placeholder="juan@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-                {errors.email && <span className="error-message">{errors.email}</span>}
-                <small style={{ display: 'block', marginTop: '8px', color: '#6b7280', fontSize: '13px' }}>
-                  Use the email from your existing StreetBites account
-                </small>
-              </div>
+  return (
+    <div className="profile-page-background account-page vendor-signup-page">
+      <div className="profile-container">
+        <header className="profile-header">
+          <button 
+            className="collapse-button" 
+            onClick={handleBack} 
+            disabled={isLoading}
+          >
+            ←
+          </button>
+          <h1 className="header-title">Apply as Vendor</h1>
+        </header>
 
-              <button type="submit" className="submit-btn">Next</button>
-            </form>
-          )}
+        <div className="content-section">
+          <h2 className="section-title">Business Information</h2>
+          
+          <p className="vendor-description">
+            Tell us about your business. Your application will be reviewed by our team for approval.
+          </p>
 
-          {/* Step 2: Business Information */}
-          {step === 2 && (
-            <form className="email-form" onSubmit={handleSubmit} noValidate>
-              <div className="form-group">
-                <label htmlFor="businessName" className="form-label">
-                  Business Name
-                </label>
-                <input
-                  type="text"
-                  id="businessName"
-                  name="businessName"
-                  className="form-input"
-                  placeholder="Jack's Cool Drinks"
-                  value={formData.businessName}
-                  onChange={handleChange}
-                  required
-                  disabled={isLoading}
-                />
-                {errors.businessName && (
-                  <span className="error-message">{errors.businessName}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="address" className="form-label">
-                  Business Address
-                </label>
-                <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  className="form-input"
-                  placeholder="Etivac"
-                  value={formData.address}
-                  onChange={handleChange}
-                  required
-                  disabled={isLoading}
-                />
-                {errors.address && (
-                  <span className="error-message">{errors.address}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="operatingHours" className="form-label">
-                  Operating Hours
-                </label>
-                <input
-                  type="text"
-                  id="operatingHours"
-                  name="operatingHours"
-                  className="form-input"
-                  placeholder="1pm to 3pm"
-                  value={formData.operatingHours}
-                  onChange={handleChange}
-                  required
-                  disabled={isLoading}
-                />
-                {errors.operatingHours && (
-                  <span className="error-message">{errors.operatingHours}</span>
-                )}
-              </div>
-
-              <div className="form-group" style={{ 
-                backgroundColor: '#f3f4f6', 
-                padding: '12px', 
-                borderRadius: '8px',
-                marginBottom: '20px'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
-                  <strong>📋 Application Status:</strong> Pending Review
-                </p>
-                <small style={{ display: 'block', marginTop: '4px', color: '#6b7280', fontSize: '12px' }}>
-                  Your vendor application will be reviewed by our team. You'll receive an email notification once approved.
-                </small>
-              </div>
-
-              {errors.submit && (
-                <div className="error-message" style={{ marginBottom: '16px', textAlign: 'center' }}>
-                  {errors.submit}
-                </div>
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="form-group">
+              <label htmlFor="businessName" className="form-label">
+                Business Name
+              </label>
+              <input
+                type="text"
+                id="businessName"
+                name="businessName"
+                className="form-input"
+                placeholder="Jack's Cool Drinks"
+                value={formData.businessName}
+                onChange={handleChange}
+                required
+                disabled={isLoading || !currentUser}
+              />
+              {errors.businessName && (
+                <span className="vendor-error">{errors.businessName}</span>
               )}
+            </div>
 
-              <button type="submit" className="submit-btn" disabled={isLoading}>
+            <div className="form-group">
+              <label htmlFor="address" className="form-label">
+                Business Address
+              </label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                className="form-input"
+                placeholder="123 Main Street, City"
+                value={formData.address}
+                onChange={handleChange}
+                required
+                disabled={isLoading || !currentUser}
+              />
+              {errors.address && (
+                <span className="vendor-error">{errors.address}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="operatingHours" className="form-label">
+                Operating Hours
+              </label>
+              <input
+                type="text"
+                id="operatingHours"
+                name="operatingHours"
+                className="form-input"
+                placeholder="Mon-Fri: 9AM-5PM"
+                value={formData.operatingHours}
+                onChange={handleChange}
+                required
+                disabled={isLoading || !currentUser}
+              />
+              {errors.operatingHours && (
+                <span className="vendor-error">{errors.operatingHours}</span>
+              )}
+            </div>
+
+            {errors.submit && (
+              <div className="vendor-submit-error">
+                {errors.submit}
+              </div>
+            )}
+
+            <div className="button-group">
+              <button 
+                type="submit" 
+                className="btn-primary" 
+                disabled={isLoading || !currentUser}
+              >
                 {isLoading ? 'Submitting Application...' : 'Submit Application'}
               </button>
-            </form>
-          )}
+            </div>
+          </form>
 
-          <div className="signup-section">
-            <span className="signup-text">
-              Don't have an account?{' '}
-              <a href="/user-sign" className="signup-link">
-                Create User Account First
-              </a>
-            </span>
+          <div className="vendor-help-section">
+            Need help?{' '}
+            <a href="/faq" className="vendor-help-link">
+              View FAQ
+            </a>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
