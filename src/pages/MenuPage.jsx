@@ -24,6 +24,10 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // Constants for limiting reviews
+  const MAX_REVIEWS = 2;
+  const MAX_REVIEW_LENGTH = 50;
 
   // State for favorites and pop-up
   const [currentUser, setCurrentUser] = useState(null);
@@ -122,6 +126,15 @@ const MenuPage = () => {
   const handleNext = () => setActiveIndex(prev => (prev < menuItems.length - 1 ? prev + 1 : 0));
   const activeItem = menuItems[activeIndex];
 
+  // Function to truncate review text
+  const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  // Limit the number of reviews displayed
+  const displayedReviews = reviews.slice(0, MAX_REVIEWS);
+
   if (loading) return <div className="menu-page-container loading"><p>Loading...</p></div>;
   if (error) return <div className="menu-page-container error"><p>Error: {error}</p></div>;
   if (!vendor) return null;
@@ -131,7 +144,7 @@ const MenuPage = () => {
       {showPopup && <div className="favorite-popup">{popupMessage}</div>}
 
       <header className="menu-header">
-        <button onClick={() => navigate(-1)} className="back-button"><FaArrowLeft /></button>
+       <button onClick={() => navigate('/')} className="back-button"><FaArrowLeft /></button>
         <div className="vendor-name-title-clickable" onClick={() => navigate(`/vendor/${vendor.id}`)}>
           <h1>{vendor.businessName}</h1>
         </div>
@@ -161,7 +174,7 @@ const MenuPage = () => {
       </div>
 
       <div className="menu-details-card">
-        <button className="review-button">Review</button>
+        
         
         {activeItem ? (
           <div className="main-dish-section">
@@ -181,21 +194,26 @@ const MenuPage = () => {
 
         <div className="reviews-section">
           {reviews.length > 0 ? (
-            reviews.map(review => (
-              <div key={review.id} className="review-item">
-                <div className="reviewer-info">
-                  <img src={review.reviewerAvatarUrl} alt={review.reviewerName} className="reviewer-avatar" />
-                  <div className="reviewer-details">
-                    <p className="reviewer-name">{review.reviewerName}</p>
-                    <p className="review-text">{review.text}</p>
-                  </div>
-                  <div className="review-rating">
-                    <span>{review.rating}</span>
-                    <FaStar className="filled"/>
+            <>
+              {displayedReviews.map(review => (
+                <div key={review.id} className="review-item">
+                  <div className="reviewer-info">
+                    <img src={review.reviewerAvatarUrl} alt={review.reviewerName} className="reviewer-avatar" />
+                    <div className="reviewer-details">
+                      <p className="reviewer-name">{review.reviewerName}</p>
+                      <p className="review-text">{truncateText(review.text, MAX_REVIEW_LENGTH)}</p>
+                    </div>
+                    <div className="review-rating">
+                      <span>{review.rating}</span>
+                      <FaStar className="filled"/>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+              {reviews.length > MAX_REVIEWS && (
+                <p className="more-reviews-text">Showing {MAX_REVIEWS} of {reviews.length} reviews</p>
+              )}
+            </>
           ) : (
             <p className="no-reviews">No reviews yet. Be the first!</p>
           )}

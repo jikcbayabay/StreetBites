@@ -51,22 +51,38 @@ const MapsPage = () => {
         if (mapRef.current) {
             const defaultLocation = { lat: 14.5764, lng: 121.0237 };
 
+            // Create the map with control positioning and padding so built-in controls
+            // don't overlap the custom bottom nav and floating buttons.
             const newMap = new window.google.maps.Map(mapRef.current, {
                 zoom: 15,
                 center: defaultLocation,
                 mapTypeControl: true,
+                // put map type control top-left (away from floating buttons)
+                mapTypeControlOptions: { position: window.google.maps.ControlPosition.TOP_LEFT },
                 fullscreenControl: true,
+                fullscreenControlOptions: { position: window.google.maps.ControlPosition.TOP_LEFT },
                 streetViewControl: false,
                 zoomControl: true,
+                // move zoom control to top-right so it doesn't get hidden by bottom nav
+                zoomControlOptions: { position: window.google.maps.ControlPosition.RIGHT_TOP },
                 mapTypeId: 'roadmap',
+                // small style tweak: hide POI labels for clarity
                 styles: [
                     {
                         featureType: 'poi',
                         elementType: 'labels',
                         stylers: [{ visibility: 'off' }]
                     }
-                ]
+                ],
+                // make touch-dragging and scroll smoother on mobile
+                gestureHandling: 'greedy',
+                clickableIcons: false,
+                // padding keeps built-in controls and overlays away from the edges
+                padding: { top: 80, right: 16, bottom: 140, left: 16 }
             });
+
+            // Defensive: also set options after creation in case padding isn't applied at init
+            newMap.setOptions({ padding: { top: 80, right: 16, bottom: 140, left: 16 } });
 
             setMap(newMap);
         }
@@ -314,52 +330,55 @@ const MapsPage = () => {
         },
         mapElement: {
             width: '100%',
-            height: '100%'
+            height: '100%',
+            minHeight: '360px',
+            borderRadius: '8px',
+            overflow: 'hidden'
         },
         locationButton: {
             position: 'absolute',
-            bottom: '100px',
+            bottom: '120px',
             right: '16px',
-            width: '56px',
-            height: '56px',
+            width: '48px',
+            height: '48px',
             backgroundColor: 'white',
-            borderRadius: '50%',
+            borderRadius: '12px',
             border: 'none',
             cursor: isLocating ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            zIndex: 30,
-            transition: 'all 0.3s',
-            opacity: isLocating ? 0.6 : 1,
-            transform: isHoveringLocation && !isLocating ? 'scale(1.1)' : 'scale(1)'
+            boxShadow: '0 6px 18px rgba(15, 23, 42, 0.08)',
+            zIndex: 50,
+            transition: 'transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
+            opacity: isLocating ? 0.7 : 1,
+            transform: isHoveringLocation && !isLocating ? 'scale(1.06)' : 'scale(1)'
         },
         locationButtonHover: {
             backgroundColor: '#f9fafb',
-            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)'
+            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.12)'
         },
         removeButton: {
             position: 'absolute',
-            bottom: '170px',
+            bottom: '188px',
             right: '16px',
-            width: '56px',
-            height: '56px',
+            width: '44px',
+            height: '44px',
             backgroundColor: '#dc2626',
-            borderRadius: '50%',
+            borderRadius: '10px',
             border: 'none',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
-            zIndex: 30,
-            transition: 'all 0.3s',
-            transform: isHoveringRemove ? 'scale(1.1)' : 'scale(1)'
+            boxShadow: '0 6px 16px rgba(220, 38, 38, 0.14)',
+            zIndex: 50,
+            transition: 'transform 180ms ease, box-shadow 180ms ease',
+            transform: isHoveringRemove ? 'scale(1.06)' : 'scale(1)'
         },
         removeButtonHover: {
             backgroundColor: '#b91c1c',
-            boxShadow: '0 6px 16px rgba(220, 38, 38, 0.4)'
+            boxShadow: '0 10px 24px rgba(185, 28, 28, 0.14)'
         },
         bottomNav: {
             position: 'fixed',

@@ -1,950 +1,652 @@
-import React, { useState } from 'react';
-import { User, Plus, TrendingUp, MapPin, Star, Eye, Heart, MessageCircle, Camera } from 'lucide-react';
-
-// CSS embedded in the component for artifact compatibility
-const styles = `
-  .vendor-dashboard {
-    font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
-    min-height: 100vh;
-    padding-bottom: 80px;
-  }
-
-  .vendor-header {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    color: white;
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .vendor-header h1 {
-    font-size: 24px;
-    font-weight: bold;
-    margin: 0;
-  }
-
-  .vendor-badge {
-    background-color: rgba(255, 255, 255, 0.2);
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  .vendor-main {
-    padding: 20px;
-    max-width: 100%;
-  }
-
-  .vendor-content {
-    animation: fadeIn 0.3s ease-in;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .content-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  .content-header h2 {
-    font-size: 22px;
-    font-weight: bold;
-    color: #111827;
-    margin: 0;
-  }
-
-  .add-button {
-    background-color: #dc2626;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.3s;
-  }
-
-  .add-button:hover {
-    background-color: #b91c1c;
-  }
-
-  .vendor-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .vendor-profile {
-    display: flex;
-    gap: 16px;
-    align-items: start;
-  }
-
-  .vendor-image-container {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  .vendor-image {
-    width: 100px;
-    height: 100px;
-    border-radius: 12px;
-    object-fit: cover;
-  }
-
-  .edit-image-btn {
-    position: absolute;
-    bottom: -8px;
-    right: -8px;
-    background-color: #dc2626;
-    color: white;
-    border: 2px solid white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-
-  .vendor-info {
-    flex: 1;
-  }
-
-  .vendor-info h3 {
-    font-size: 18px;
-    font-weight: bold;
-    color: #111827;
-    margin: 0 0 8px 0;
-  }
-
-  .vendor-description {
-    font-size: 14px;
-    color: #6b7280;
-    margin: 0 0 12px 0;
-  }
-
-  .vendor-meta {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    font-size: 13px;
-  }
-
-  .vendor-meta .location {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #6b7280;
-  }
-
-  .vendor-meta .category {
-    background-color: #f3f4f6;
-    padding: 4px 10px;
-    border-radius: 12px;
-    color: #374151;
-  }
-
-  .vendor-meta .rating {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #111827;
-    font-weight: 600;
-  }
-
-  .edit-button {
-    background-color: #f3f4f6;
-    color: #374151;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.3s;
-  }
-
-  .edit-button:hover {
-    background-color: #e5e7eb;
-  }
-
-  .listings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-
-  .listing-card {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s, box-shadow 0.3s;
-  }
-
-  .listing-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  .listing-image-wrapper {
-    position: relative;
-    height: 180px;
-    overflow: hidden;
-  }
-
-  .listing-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .listing-stats {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    gap: 8px;
-  }
-
-  .listing-stats span {
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .listing-details {
-    padding: 12px;
-  }
-
-  .listing-details h4 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0 0 6px 0;
-  }
-
-  .listing-price {
-    font-size: 18px;
-    font-weight: bold;
-    color: #dc2626;
-    margin: 0 0 12px 0;
-  }
-
-  .edit-listing-btn {
-    width: 100%;
-    background-color: #f3f4f6;
-    color: #374151;
-    border: none;
-    padding: 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.3s;
-  }
-
-  .edit-listing-btn:hover {
-    background-color: #e5e7eb;
-  }
-
-  .period-select {
-    padding: 8px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background-color: white;
-    cursor: pointer;
-    font-size: 14px;
-    color: #374151;
-  }
-
-  .insights-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .insight-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    display: flex;
-    gap: 12px;
-  }
-
-  .insight-icon {
-    width: 44px;
-    height: 44px;
-    background-color: #fee2e2;
-    color: #dc2626;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .insight-info {
-    flex: 1;
-  }
-
-  .insight-label {
-    font-size: 13px;
-    color: #6b7280;
-    margin: 0 0 4px 0;
-  }
-
-  .insight-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #111827;
-    margin: 0 0 4px 0;
-  }
-
-  .insight-change {
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .insight-change.positive {
-    color: #10b981;
-  }
-
-  .chart-placeholder {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .chart-placeholder h3 {
-    font-size: 18px;
-    font-weight: bold;
-    color: #111827;
-    margin: 0 0 16px 0;
-  }
-
-  .chart-content {
-    background-color: #f9fafb;
-    border-radius: 8px;
-    padding: 40px;
-    text-align: center;
-    color: #6b7280;
-  }
-
-  .chart-content p {
-    margin: 8px 0;
-  }
-
-  .chart-note {
-    font-size: 13px;
-  }
-
-  .messages-list {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .message-item {
-    display: flex;
-    gap: 12px;
-    padding: 16px;
-    border-bottom: 1px solid #f3f4f6;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    position: relative;
-  }
-
-  .message-item:hover {
-    background-color: #f9fafb;
-  }
-
-  .message-item.unread {
-    background-color: #fef2f2;
-  }
-
-  .message-avatar {
-    width: 44px;
-    height: 44px;
-    background-color: #f3f4f6;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6b7280;
-    flex-shrink: 0;
-  }
-
-  .message-content {
-    flex: 1;
-  }
-
-  .message-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-
-  .message-header h4 {
-    font-size: 15px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-  }
-
-  .message-time {
-    font-size: 12px;
-    color: #9ca3af;
-  }
-
-  .message-text {
-    font-size: 14px;
-    color: #6b7280;
-    margin: 0;
-  }
-
-  .unread-indicator {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background-color: #dc2626;
-    border-radius: 50%;
-  }
-
-  .profile-section {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .profile-field {
-    margin-bottom: 20px;
-  }
-
-  .profile-field label {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 8px;
-  }
-
-  .profile-field input,
-  .profile-field textarea,
-  .profile-field select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #374151;
-    box-sizing: border-box;
-  }
-
-  .profile-field textarea {
-    resize: vertical;
-    font-family: Arial, sans-serif;
-  }
-
-  .save-button {
-    background-color: #dc2626;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 600;
-    width: 100%;
-    transition: background-color 0.3s;
-  }
-
-  .save-button:hover {
-    background-color: #b91c1c;
-  }
-
-  .vendor-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: white;
-    border-top: 1px solid #e5e7eb;
-    padding: 8px 16px 12px;
-    display: flex;
-    justify-content: space-around;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-    z-index: 100;
-  }
-
-  .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px 12px;
-    color: #6b7280;
-    transition: color 0.3s;
-    position: relative;
-  }
-
-  .nav-item.active {
-    color: #dc2626;
-  }
-
-  .nav-item span {
-    font-size: 11px;
-    font-weight: 500;
-  }
-
-  .notification-badge {
-    position: absolute;
-    top: 0;
-    right: 8px;
-    background-color: #dc2626;
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
-    padding: 2px 5px;
-    border-radius: 10px;
-    min-width: 16px;
-    text-align: center;
-  }
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-  }
-
-  .modal-content {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    max-width: 500px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  .modal-content h3 {
-    font-size: 20px;
-    font-weight: bold;
-    color: #111827;
-    margin: 0 0 20px 0;
-  }
-
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .form-field {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .form-field label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 8px;
-  }
-
-  .form-field input,
-  .form-field textarea {
-    padding: 10px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #374151;
-  }
-
-  .upload-area {
-    border: 2px dashed #e5e7eb;
-    border-radius: 8px;
-    padding: 32px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.3s;
-  }
-
-  .upload-area:hover {
-    border-color: #dc2626;
-  }
-
-  .upload-area p {
-    margin: 8px 0 0 0;
-    font-size: 13px;
-    color: #6b7280;
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 8px;
-  }
-
-  .cancel-btn,
-  .submit-btn {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 600;
-    transition: background-color 0.3s;
-  }
-
-  .cancel-btn {
-    background-color: #f3f4f6;
-    color: #374151;
-  }
-
-  .cancel-btn:hover {
-    background-color: #e5e7eb;
-  }
-
-  .submit-btn {
-    background-color: #dc2626;
-    color: white;
-  }
-
-  .submit-btn:hover {
-    background-color: #b91c1c;
-  }
-
-  @media (max-width: 640px) {
-    .vendor-profile {
-      flex-direction: column;
-    }
-
-    .insights-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .listings-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-`;
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { db, auth } from '../../firebase.js';
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, collection, query, where, getDocs, getCountFromServer, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { User, Plus, TrendingUp, MapPin, Star, Eye, Heart, MessageCircle, Camera, LogOut, Bell, Settings, BarChart2, Edit3, Trash2, Link as LinkIcon, ChevronsUpDown } from 'lucide-react';
+import './VendorDashboard.css';
 
 const VendorDashboard = () => {
-  const [activeNav, setActiveNav] = useState('listings');
-  const [showAddModal, setShowAddModal] = useState(false);
+    const navigate = useNavigate();
+    const [activeNav, setActiveNav] = useState('listings');
+    const [loading, setLoading] = useState(true);
+    
+    const [currentUser, setCurrentUser] = useState(null);
+    
+    // State to manage multiple businesses
+    const [vendorProfiles, setVendorProfiles] = useState([]); // Holds all businesses for the user
+    const [selectedVendorId, setSelectedVendorId] = useState(''); // ID of the currently selected business
+    const [vendorData, setVendorData] = useState(null); // Data for the selected business
 
-  // Sample vendor data
-  const vendorData = {
-    name: "Boss Karl's Cart",
-    description: "Authentic Filipino street food since 2020",
-    location: "Sampaloc, Manila",
-    category: "Street Food",
-    rating: 4.8,
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop"
-  };
+    const [listings, setListings] = useState([]);
+    const [insights, setInsights] = useState({
+        profileViews: "1.2k",
+        totalLikes: 0,
+        totalReviews: 0,
+    });
 
-  const listings = [
-    { id: 1, name: "Isaw Combo", price: "₱35", image: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=300&h=200&fit=crop", views: 234, likes: 45 },
-    { id: 2, name: "Kwek-Kwek Special", price: "₱25", image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300&h=200&fit=crop", views: 189, likes: 38 },
-    { id: 3, name: "Barbecue Stick", price: "₱15", image: "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=300&h=200&fit=crop", views: 312, likes: 67 }
-  ];
+    // State for modals
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showProfileImageModal, setShowProfileImageModal] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+    
+    // State for forms
+    const [newItem, setNewItem] = useState({ name: '', price: '', description: '', imageUrl: '', category: '', isBestSeller: false });
+    const [editItem, setEditItem] = useState({ name: '', price: '', description: '', imageUrl: '', category: '', isBestSeller: false });
+    const [editableProfile, setEditableProfile] = useState({});
+    const [profileImageUrl, setProfileImageUrl] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const insights = [
-    { label: "Profile Views", value: "1,234", change: "+12%", icon: <Eye size={20} /> },
-    { label: "Total Likes", value: "456", change: "+8%", icon: <Heart size={20} /> },
-    { label: "Listing Views", value: "2,891", change: "+15%", icon: <TrendingUp size={20} /> },
-    { label: "Engagement Rate", value: "23%", change: "+3%", icon: <Star size={20} /> }
-  ];
+    // Effect to get the current user
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setCurrentUser(user);
+                fetchVendorProfiles(user.uid); // Initial fetch of all business profiles
+            } else {
+                navigate('/login');
+            }
+        });
+        return () => unsubscribe();
+    }, [navigate]);
 
-  const messages = [
-    { id: 1, user: "Maria S.", message: "What time do you open?", time: "10 min ago", unread: true },
-    { id: 2, user: "Juan D.", message: "Do you have vegetarian options?", time: "1 hour ago", unread: true },
-    { id: 3, user: "Anna R.", message: "Great food! Will visit again.", time: "2 hours ago", unread: false }
-  ];
+    // Effect to fetch data for the selected vendor
+    useEffect(() => {
+        if (selectedVendorId) {
+            fetchDashboardData(selectedVendorId);
+        }
+    }, [selectedVendorId]);
 
-  const renderListings = () => (
-    <div className="vendor-content">
-      <div className="content-header">
-        <h2>My Listings</h2>
-        <button className="add-button" onClick={() => setShowAddModal(true)}>
-          <Plus size={18} />
-          <span>Add New</span>
-        </button>
-      </div>
+    // Fetches all businesses owned by the user
+    const fetchVendorProfiles = async (authUid) => {
+        setLoading(true);
+        try {
+            const vendorQuery = query(collection(db, "vendor_list"), where("uid", "==", authUid));
+            const vendorSnapshot = await getDocs(vendorQuery);
 
-      <div className="vendor-card">
-        <div className="vendor-profile">
-          <div className="vendor-image-container">
-            <img src={vendorData.image} alt={vendorData.name} className="vendor-image" />
-            <button className="edit-image-btn">
-              <Camera size={16} />
-            </button>
-          </div>
-          <div className="vendor-info">
-            <h3>{vendorData.name}</h3>
-            <p className="vendor-description">{vendorData.description}</p>
-            <div className="vendor-meta">
-              <span className="location">
-                <MapPin size={14} />
-                {vendorData.location}
-              </span>
-              <span className="category">{vendorData.category}</span>
-              <span className="rating">
-                <Star size={14} fill="#fbbf24" color="#fbbf24" />
-                {vendorData.rating}
-              </span>
-            </div>
-          </div>
-          <button className="edit-button">Edit</button>
-        </div>
-      </div>
+            if (vendorSnapshot.empty) {
+                console.log("No vendor profiles found for this user.");
+                setVendorProfiles([]);
+                setVendorData(null);
+                setLoading(false);
+                return;
+            }
 
-      <div className="listings-grid">
-        {listings.map(item => (
-          <div key={item.id} className="listing-card">
-            <div className="listing-image-wrapper">
-              <img src={item.image} alt={item.name} className="listing-image" />
-              <div className="listing-stats">
-                <span><Eye size={12} /> {item.views}</span>
-                <span><Heart size={12} /> {item.likes}</span>
-              </div>
-            </div>
-            <div className="listing-details">
-              <h4>{item.name}</h4>
-              <p className="listing-price">{item.price}</p>
-              <button className="edit-listing-btn">Edit</button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+            const profiles = vendorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setVendorProfiles(profiles);
+            if (profiles.length > 0) {
+                setSelectedVendorId(profiles[0].id); // Select the first business by default
+            }
 
-  const renderInsights = () => (
-    <div className="vendor-content">
-      <div className="content-header">
-        <h2>Insights</h2>
-        <select className="period-select">
-          <option>Last 7 days</option>
-          <option>Last 30 days</option>
-          <option>Last 90 days</option>
-        </select>
-      </div>
+        } catch (error) {
+            console.error("Failed to fetch vendor profiles:", error);
+            setLoading(false);
+        }
+    };
 
-      <div className="insights-grid">
-        {insights.map((insight, idx) => (
-          <div key={idx} className="insight-card">
-            <div className="insight-icon">{insight.icon}</div>
-            <div className="insight-info">
-              <p className="insight-label">{insight.label}</p>
-              <h3 className="insight-value">{insight.value}</h3>
-              <span className="insight-change positive">{insight.change}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+    // Fetches listings and insights for a specific business ID
+    const fetchDashboardData = async (vendorId) => {
+        // Find the full profile data from the state we already fetched
+        const currentVendorProfile = vendorProfiles.find(p => p.id === vendorId);
+        if (currentVendorProfile) {
+            setVendorData(currentVendorProfile);
+            setEditableProfile(currentVendorProfile);
+        }
+        
+        try {
+            const listingsQuery = query(collection(db, 'menu_items'), where('vendorId', '==', vendorId));
+            const listingsSnapshot = await getDocs(listingsQuery);
+            const filteredListings = listingsSnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(item => !item.isDeleted);
+            setListings(filteredListings);
 
-      <div className="chart-placeholder">
-        <h3>Engagement Over Time</h3>
-        <div className="chart-content">
-          <p>Chart visualization would go here</p>
-          <p className="chart-note">Track your profile views, likes, and engagement metrics</p>
-        </div>
-      </div>
-    </div>
-  );
+            const favoritesQuery = query(collection(db, 'favorites'), where('vendorId', '==', vendorId));
+            const favoritesSnapshot = await getCountFromServer(favoritesQuery);
+            
+            const reviewsQuery = query(collection(db, 'reviews'), where('vendorId', '==', vendorId));
+            const reviewsSnapshot = await getCountFromServer(reviewsQuery);
+            
+            setInsights(prev => ({
+                ...prev,
+                totalLikes: favoritesSnapshot.data().count,
+                totalReviews: reviewsSnapshot.data().count,
+            }));
+            
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // Handles changing the selected business from the dropdown
+    const handleVendorChange = (e) => {
+        setSelectedVendorId(e.target.value);
+    };
 
-  const renderMessages = () => (
-    <div className="vendor-content">
-      <div className="content-header">
-        <h2>Messages</h2>
-      </div>
+    const handleLogout = () => {
+        signOut(auth).then(() => navigate('/login')).catch(console.error);
+    };
 
-      <div className="messages-list">
-        {messages.map(msg => (
-          <div key={msg.id} className={`message-item ${msg.unread ? 'unread' : ''}`}>
-            <div className="message-avatar">
-              <User size={24} />
-            </div>
-            <div className="message-content">
-              <div className="message-header">
-                <h4>{msg.user}</h4>
-                <span className="message-time">{msg.time}</span>
-              </div>
-              <p className="message-text">{msg.message}</p>
-            </div>
-            {msg.unread && <div className="unread-indicator"></div>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    const handleProfileImageUpdate = async (e) => {
+        e.preventDefault();
+        if (!profileImageUrl.trim() || !vendorData) return;
+        setIsSubmitting(true);
+        try {
+            const vendorRef = doc(db, 'vendor_list', vendorData.id);
+            await updateDoc(vendorRef, { logoUrl: profileImageUrl });
+            
+            setShowProfileImageModal(false);
+            setProfileImageUrl('');
+            await fetchVendorProfiles(currentUser.uid); // Refetch all profiles to get updated data
+            alert("Profile image updated successfully!");
+        } catch (error) {
+            console.error("Error updating profile image:", error);
+            alert("Failed to update profile image. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-  const renderProfile = () => (
-    <div className="vendor-content">
-      <div className="content-header">
-        <h2>Profile Settings</h2>
-      </div>
+    const handleAddNewListing = async (e) => {
+        e.preventDefault();
+        if (!newItem.name || !newItem.price || !vendorData) return;
+        setIsSubmitting(true);
+        try {
+            await addDoc(collection(db, 'menu_items'), {
+                vendorId: vendorData.id, // Use the ID of the currently selected vendor
+                name: newItem.name,
+                price: parseFloat(newItem.price),
+                description: newItem.description,
+                imageUrl: newItem.imageUrl || '',
+                category: newItem.category || '',
+                isBestSeller: newItem.isBestSeller,
+                isDeleted: false,
+                createdAt: serverTimestamp(),
+            });
+            setNewItem({ name: '', price: '', description: '', imageUrl: '', category: '', isBestSeller: false });
+            setShowAddModal(false);
+            fetchDashboardData(selectedVendorId); // Refresh data for the current vendor
+        } catch (error) {
+            console.error("Error adding new listing:", error);
+            alert("Failed to add listing. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-      <div className="profile-section">
-        <div className="profile-field">
-          <label>Business Name</label>
-          <input type="text" defaultValue={vendorData.name} />
-        </div>
-        <div className="profile-field">
-          <label>Description</label>
-          <textarea rows="3" defaultValue={vendorData.description}></textarea>
-        </div>
-        <div className="profile-field">
-          <label>Location</label>
-          <input type="text" defaultValue={vendorData.location} />
-        </div>
-        <div className="profile-field">
-          <label>Category</label>
-          <select defaultValue={vendorData.category}>
-            <option>Street Food</option>
-            <option>Beverages</option>
-            <option>Desserts</option>
-            <option>Grilled Items</option>
-          </select>
-        </div>
-        <div className="profile-field">
-          <label>Operating Hours</label>
-          <input type="text" placeholder="e.g., 8:00 AM - 8:00 PM" />
-        </div>
-        <div className="profile-field">
-          <label>Contact Number</label>
-          <input type="tel" placeholder="+63 XXX XXX XXXX" />
-        </div>
-        <button className="save-button">Save Changes</button>
-      </div>
-    </div>
-  );
+    const handleEditItem = (item) => {
+        setSelectedItem(item);
+        setEditItem({
+            name: item.name,
+            price: item.price,
+            description: item.description || '',
+            imageUrl: item.imageUrl || '',
+            category: item.category || '',
+            isBestSeller: item.isBestSeller || false,
+            currentImageUrl: item.imageUrl
+        });
+        setShowEditModal(true);
+    };
 
-  return (
-    <>
-      <style>{styles}</style>
-      <div className="vendor-dashboard">
-        <header className="vendor-header">
-          <h1>StreetBites</h1>
-          <span className="vendor-badge">Vendor</span>
-        </header>
+    const handleUpdateItem = async (e) => {
+        e.preventDefault();
+        if (!editItem.name || !editItem.price || !selectedItem) return;
+        setIsSubmitting(true);
+        try {
+            const itemRef = doc(db, 'menu_items', selectedItem.id);
+            await updateDoc(itemRef, {
+                name: editItem.name,
+                price: parseFloat(editItem.price),
+                description: editItem.description,
+                imageUrl: editItem.imageUrl || editItem.currentImageUrl,
+                category: editItem.category || '',
+                isBestSeller: editItem.isBestSeller,
+            });
+            setShowEditModal(false);
+            setSelectedItem(null);
+            fetchDashboardData(selectedVendorId);
+        } catch (error) {
+            console.error("Error updating item:", error);
+            alert("Failed to update item. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-        <div className="vendor-main">
-          {activeNav === 'listings' && renderListings()}
-          {activeNav === 'insights' && renderInsights()}
-          {activeNav === 'messages' && renderMessages()}
-          {activeNav === 'profile' && renderProfile()}
-        </div>
+    const handleDeleteItem = async () => {
+        if (!selectedItem) return;
+        if (!window.confirm(`Are you sure you want to delete "${selectedItem.name}"?`)) return;
+        setIsSubmitting(true);
+        try {
+            const itemRef = doc(db, 'menu_items', selectedItem.id);
+            await updateDoc(itemRef, { isDeleted: true });
+            setShowEditModal(false);
+            setSelectedItem(null);
+            fetchDashboardData(selectedVendorId);
+        } catch (error) {
+            console.error("Error deleting item:", error);
+            alert("Failed to delete item. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-        <nav className="vendor-bottom-nav">
-          <button
-            className={`nav-item ${activeNav === 'listings' ? 'active' : ''}`}
-            onClick={() => setActiveNav('listings')}
-          >
-            <MapPin size={22} />
-            <span>My Listings</span>
-          </button>
-          <button
-            className={`nav-item ${activeNav === 'insights' ? 'active' : ''}`}
-            onClick={() => setActiveNav('insights')}
-          >
-            <TrendingUp size={22} />
-            <span>Insights</span>
-          </button>
-          <button
-            className={`nav-item ${activeNav === 'messages' ? 'active' : ''}`}
-            onClick={() => setActiveNav('messages')}
-          >
-            <MessageCircle size={22} />
-            <span>Messages</span>
-            <span className="notification-badge">2</span>
-          </button>
-          <button
-            className={`nav-item ${activeNav === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveNav('profile')}
-          >
-            <User size={22} />
-            <span>Profile</span>
-          </button>
-        </nav>
+    const handleProfileUpdate = async (e) => {
+        e.preventDefault();
+        if (!vendorData) return;
+        setIsSubmitting(true);
+        try {
+            const vendorRef = doc(db, 'vendor_list', vendorData.id);
+            await updateDoc(vendorRef, editableProfile);
+            await fetchVendorProfiles(currentUser.uid); // Refetch profiles to update dropdown if name changed
+            alert("Profile updated successfully!");
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            alert("Failed to update profile. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-        {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h3>Add New Listing</h3>
-              <div className="modal-form">
-                <div className="form-field">
-                  <label>Item Name</label>
-                  <input type="text" placeholder="e.g., Chicken Barbecue" />
+    const handleAddAnotherBusiness = () => {
+        navigate('/add-business');
+    };
+
+    const renderListings = () => (
+        <div className="content-section">
+            <div className="section-header">
+                <div className="title-with-selector">
+                    <h2 className="section-title">My Listings</h2>
+                    {vendorProfiles.length > 1 && (
+                        <div className="vendor-selector-wrapper">
+                             <select className="vendor-selector" value={selectedVendorId} onChange={handleVendorChange}>
+                                {vendorProfiles.map(profile => (
+                                    <option key={profile.id} value={profile.id}>
+                                        {profile.businessName}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronsUpDown size={16} className="vendor-selector-icon" />
+                        </div>
+                    )}
                 </div>
-                <div className="form-field">
-                  <label>Price</label>
-                  <input type="text" placeholder="₱" />
-                </div>
-                <div className="form-field">
-                  <label>Description</label>
-                  <textarea rows="3" placeholder="Describe your item..."></textarea>
-                </div>
-                <div className="form-field">
-                  <label>Upload Photo</label>
-                  <div className="upload-area">
-                    <Camera size={32} />
-                    <p>Click to upload or drag and drop</p>
-                  </div>
-                </div>
-                <div className="modal-actions">
-                  <button className="cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
-                  <button className="submit-btn">Add Listing</button>
-                </div>
-              </div>
+                <button className="primary-btn" onClick={() => setShowAddModal(true)} disabled={!vendorData}>
+                    <Plus size={18} /> Add New Listing
+                </button>
             </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
+
+            {!vendorData && !loading && (
+                 <div className="empty-menu-state" style={{padding: '40px', textAlign: 'center'}}>
+                    <p>No business profile found. Please add one to get started.</p>
+                    <button className="primary-btn" style={{marginTop: '1rem'}} onClick={() => navigate('/add-business')}>Add a Business</button>
+                </div>
+            )}
+            
+            {vendorData && (
+                <>
+                    <div className="activity-card">
+                        <div className="vendor-profile">
+                            <div className="vendor-image-container">
+                                <img src={vendorData.logoUrl || "https://via.placeholder.com/100"} alt={vendorData.businessName} className="vendor-image" />
+                                <button className="edit-image-btn" onClick={() => setShowProfileImageModal(true)}>
+                                    <Camera size={16} />
+                                </button>
+                            </div>
+                            <div className="vendor-info">
+                                <h3>{vendorData.businessName}</h3>
+                                <p className="vendor-description">{vendorData.description}</p>
+                                <div className="vendor-meta">
+                                    <span className="location"><MapPin size={14} />{vendorData.address}</span>
+                                    <span className="category">{vendorData.category}</span>
+                                    <span className="rating"><Star size={14} fill="#fbbf24" color="#fbbf24" />{vendorData.numericalRating || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <button className="action-btn edit" onClick={() => setActiveNav('profile')}><Edit3 size={16} /> Edit Profile</button>
+                        </div>
+                    </div>
+                    <h3 className="subsection-title">Menu Items ({listings.length})</h3>
+                    <div className="menu-scrollable-container">
+                        <div className="listings-grid">
+                            {listings.length === 0 ? (
+                                <div className="empty-menu-state">
+                                    <p>No menu items yet. Click "Add New Listing" to get started!</p>
+                                </div>
+                            ) : (
+                                listings.map(item => (
+                                    <div key={item.id} className="listing-card" onClick={() => handleEditItem(item)}>
+                                        <div className="listing-image-wrapper">
+                                            {item.isBestSeller && (
+                                                <div className="bestseller-badge">
+                                                    <Star size={12} fill="white" /> Best Seller
+                                                </div>
+                                            )}
+                                            <img src={item.imageUrl || "https://via.placeholder.com/300x200"} alt={item.name} className="listing-image" />
+                                        </div>
+                                        <div className="listing-details">
+                                            <h4>{item.name}</h4>
+                                            {item.category && <p className="listing-category">{item.category}</p>}
+                                            <p className="listing-price">₱{item.price.toFixed(2)}</p>
+                                            {item.description && <p className="listing-description">{item.description}</p>}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+    
+    const renderInsights = () => {
+        const dynamicInsights = [
+            { label: "Profile Views", value: insights.profileViews, icon: <Eye size={24} /> },
+            { label: "Total Likes", value: insights.totalLikes, icon: <Heart size={24} /> },
+            { label: "Total Reviews", value: insights.totalReviews, icon: <MessageCircle size={24} /> },
+        ];
+        return (
+            <div className="content-section">
+                <h2 className="section-title">Insights</h2>
+                <div className="stats-grid">
+                    {dynamicInsights.map((insight, idx) => (
+                        <div key={idx} className="stat-card">
+                            <div className="stat-icon" style={{backgroundColor: '#fff5f5', color: '#E84C3D'}}>{insight.icon}</div>
+                            <div className="stat-content">
+                                <p className="stat-label">{insight.label}</p>
+                                <h3 className="stat-value">{insight.value}</h3>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderProfile = () => (
+        <div className="content-section">
+            <h2 className="section-title">Profile Settings</h2>
+            {vendorData && (
+                <form className="table-card" onSubmit={handleProfileUpdate}>
+                    <div className="form-group">
+                        <label className="form-label">Business Name</label>
+                        <input type="text" className="form-input" value={editableProfile.businessName || ''} onChange={(e) => setEditableProfile({...editableProfile, businessName: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Description</label>
+                        <textarea rows="3" className="form-input" value={editableProfile.description || ''} onChange={(e) => setEditableProfile({...editableProfile, description: e.target.value})}></textarea>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Address</label>
+                        <input type="text" className="form-input" value={editableProfile.address || ''} onChange={(e) => setEditableProfile({...editableProfile, address: e.target.value})} />
+                    </div>
+                    <div className="form-actions">
+                        <button type="submit" className="primary-btn" disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button type="button" className="secondary-btn" onClick={handleAddAnotherBusiness}>
+                            <Plus size={16} /> Add Another Business
+                        </button>
+                    </div>
+                </form>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="admin-dashboard">
+            <header className="dashboard-header">
+                <div className="header-content">
+                    <div className="header-left">
+                        <h1 className="dashboard-title">StreetBites</h1>
+                        <span className="admin-badge">Vendor</span>
+                    </div>
+                    <div className="header-right">
+                        <button className="notification-btn" onClick={() => alert('Notifications feature coming soon!')}>
+                            <Bell size={20} /><span className="notification-badge">2</span>
+                        </button>
+                        <div className="admin-profile">
+                            <div className="profile-avatar">{currentUser?.email?.charAt(0).toUpperCase()}</div>
+                            <span className="profile-name">{currentUser?.displayName || currentUser?.email}</span>
+                        </div>
+                        <button className="logout-btn" onClick={handleLogout}><LogOut size={18} /><span>Logout</span></button>
+                    </div>
+                </div>
+            </header>
+
+            <div className="dashboard-container">
+                <aside className="dashboard-sidebar">
+                    <nav className="sidebar-nav">
+                        <button className={`nav-item ${activeNav === 'listings' ? 'active' : ''}`} onClick={() => setActiveNav('listings')}>
+                           <MapPin size={20} className="nav-icon"/> <span className="nav-label">Listings</span>
+                        </button>
+                        <button className={`nav-item ${activeNav === 'insights' ? 'active' : ''}`} onClick={() => setActiveNav('insights')}>
+                           <BarChart2 size={20} className="nav-icon"/> <span className="nav-label">Insights</span>
+                        </button>
+                        <button className={`nav-item ${activeNav === 'profile' ? 'active' : ''}`} onClick={() => setActiveNav('profile')}>
+                           <Settings size={20} className="nav-icon"/> <span className="nav-label">Settings</span>
+                        </button>
+                    </nav>
+                </aside>
+                <main className="dashboard-main">
+                    {loading ? <p style={{ textAlign: 'center', padding: '40px' }}>Loading Dashboard...</p> : (
+                        <>
+                            {activeNav === 'listings' && renderListings()}
+                            {activeNav === 'insights' && renderInsights()}
+                            {activeNav === 'profile' && renderProfile()}
+                        </>
+                    )}
+                </main>
+            </div>
+
+            {/* Profile Image Modal */}
+            {showProfileImageModal && (
+                <div className="modal-overlay" onClick={() => setShowProfileImageModal(false)}>
+                    <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Update Profile Image</h3>
+                            <button className="modal-close" onClick={() => setShowProfileImageModal(false)}>&times;</button>
+                        </div>
+                        <form className="modal-body" onSubmit={handleProfileImageUpdate}>
+                            <div className="form-group">
+                                <label className="form-label">Image URL</label>
+                                <div className="url-input-wrapper">
+                                    <LinkIcon size={18} className="url-icon" />
+                                    <input 
+                                        type="url" 
+                                        className="form-input url-input" 
+                                        placeholder="https://example.com/image.jpg" 
+                                        value={profileImageUrl} 
+                                        onChange={(e) => setProfileImageUrl(e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <small style={{color: '#6b7280', fontSize: '0.875rem', display: 'block', marginTop: '0.5rem'}}>
+                                    Paste a direct link to your profile image
+                                </small>
+                            </div>
+                            {profileImageUrl && (
+                                <div className="image-preview">
+                                    <label className="form-label">Preview</label>
+                                    <img src={profileImageUrl} alt="Preview" onError={(e) => e.target.src = "https://via.placeholder.com/100"} />
+                                </div>
+                            )}
+                            <div className="modal-footer">
+                                <button type="button" className="secondary-btn" onClick={() => setShowProfileImageModal(false)}>Cancel</button>
+                                <button type="submit" className="primary-btn" disabled={isSubmitting}>
+                                    {isSubmitting ? 'Updating...' : 'Update Image'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Listing Modal */}
+            {showAddModal && (
+                <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Add New Listing</h3>
+                            <button className="modal-close" onClick={() => setShowAddModal(false)}>&times;</button>
+                        </div>
+                        <form className="modal-body" onSubmit={handleAddNewListing}>
+                            <div className="form-group">
+                                <label className="form-label">Item Name</label>
+                                <input type="text" className="form-input" placeholder="e.g., Chicken Barbecue" value={newItem.name} onChange={(e) => setNewItem({...newItem, name: e.target.value})} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Price (₱)</label>
+                                <input type="number" step="0.01" className="form-input" placeholder="e.g., 35.00" value={newItem.price} onChange={(e) => setNewItem({...newItem, price: e.target.value})} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Category</label>
+                                <input 
+                                    type="text"
+                                    className="form-input" 
+                                    placeholder="e.g., Isaw, Street Food, Grilled"
+                                    value={newItem.category} 
+                                    onChange={(e) => setNewItem({...newItem, category: e.target.value})}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Description</label>
+                                <textarea rows="3" className="form-input" placeholder="Describe your item..." value={newItem.description} onChange={(e) => setNewItem({...newItem, description: e.target.value})}></textarea>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Image URL</label>
+                                <div className="url-input-wrapper">
+                                    <LinkIcon size={18} className="url-icon" />
+                                    <input 
+                                        type="url" 
+                                        className="form-input url-input" 
+                                        placeholder="https://example.com/image.jpg" 
+                                        value={newItem.imageUrl} 
+                                        onChange={(e) => setNewItem({...newItem, imageUrl: e.target.value})} 
+                                    />
+                                </div>
+                                <small style={{color: '#6b7280', fontSize: '0.875rem', display: 'block', marginTop: '0.5rem'}}>
+                                    Optional: Paste a direct link to the item image
+                                </small>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label" style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={newItem.isBestSeller} 
+                                        onChange={(e) => setNewItem({...newItem, isBestSeller: e.target.checked})}
+                                        style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                                    />
+                                    <span>Mark as Best Seller</span>
+                                    <Star size={16} fill={newItem.isBestSeller ? "#fbbf24" : "none"} color="#fbbf24" />
+                                </label>
+                                <small style={{color: '#6b7280', fontSize: '0.875rem', display: 'block', marginTop: '0.5rem', marginLeft: '1.5rem'}}>
+                                    Best sellers will be highlighted to customers
+                                </small>
+                            </div>
+                            {newItem.imageUrl && (
+                                <div className="image-preview">
+                                    <label className="form-label">Preview</label>
+                                    <img src={newItem.imageUrl} alt="Preview" onError={(e) => e.target.src = "https://via.placeholder.com/300x200"} />
+                                </div>
+                            )}
+                            <div className="modal-footer">
+                                <button type="button" className="secondary-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
+                                <button type="submit" className="primary-btn" disabled={isSubmitting}>
+                                    {isSubmitting ? 'Adding...' : 'Add Listing'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Listing Modal */}
+            {showEditModal && selectedItem && (
+                <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>Edit Menu Item</h3>
+                            <button className="modal-close" onClick={() => setShowEditModal(false)}>&times;</button>
+                        </div>
+                        <form className="modal-body" onSubmit={handleUpdateItem}>
+                            <div className="form-group">
+                                <label className="form-label">Item Name</label>
+                                <input type="text" className="form-input" value={editItem.name} onChange={(e) => setEditItem({...editItem, name: e.target.value})} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Price (₱)</label>
+                                <input type="number" step="0.01" className="form-input" value={editItem.price} onChange={(e) => setEditItem({...editItem, price: e.target.value})} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Category</label>
+                                <input 
+                                    type="text"
+                                    className="form-input" 
+                                    placeholder="e.g., Isaw, Street Food, Grilled"
+                                    value={editItem.category} 
+                                    onChange={(e) => setEditItem({...editItem, category: e.target.value})}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Description</label>
+                                <textarea rows="3" className="form-input" value={editItem.description} onChange={(e) => setEditItem({...editItem, description: e.target.value})}></textarea>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Image URL</label>
+                                <div className="url-input-wrapper">
+                                    <LinkIcon size={18} className="url-icon" />
+                                    <input 
+                                        type="url" 
+                                        className="form-input url-input" 
+                                        placeholder="https://example.com/image.jpg" 
+                                        value={editItem.imageUrl} 
+                                        onChange={(e) => setEditItem({...editItem, imageUrl: e.target.value})} 
+                                    />
+                                </div>
+                                <small style={{color: '#6b7280', fontSize: '0.875rem', display: 'block', marginTop: '0.5rem'}}>
+                                    Leave empty to keep current image
+                                </small>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label" style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={editItem.isBestSeller} 
+                                        onChange={(e) => setEditItem({...editItem, isBestSeller: e.target.checked})}
+                                        style={{width: '18px', height: '18px', cursor: 'pointer'}}
+                                    />
+                                    <span>Mark as Best Seller</span>
+                                    <Star size={16} fill={editItem.isBestSeller ? "#fbbf24" : "none"} color="#fbbf24" />
+                                </label>
+                                <small style={{color: '#6b7280', fontSize: '0.875rem', display: 'block', marginTop: '0.5rem', marginLeft: '1.5rem'}}>
+                                    Best sellers will be highlighted to customers
+                                </small>
+                            </div>
+                            {(editItem.imageUrl || editItem.currentImageUrl) && (
+                                <div className="image-preview">
+                                    <label className="form-label">Current Image</label>
+                                    <img src={editItem.imageUrl || editItem.currentImageUrl} alt="Current" onError={(e) => e.target.src = "https://via.placeholder.com/300x200"} />
+                                </div>
+                            )}
+                            <div className="modal-footer">
+                                <button type="button" className="delete-confirm-btn" onClick={handleDeleteItem} disabled={isSubmitting}>
+                                    <Trash2 size={16} /> Delete Item
+                                </button>
+                                <div style={{flex: 1}}></div>
+                                <button type="button" className="secondary-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
+                                <button type="submit" className="primary-btn" disabled={isSubmitting}>
+                                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default VendorDashboard;
-

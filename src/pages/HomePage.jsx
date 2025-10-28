@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { RecommendationEngine } from '../services/recommendationService';
 import heroBg from "../assets/hero-bg1.jpg";
 
@@ -16,6 +16,43 @@ import barbecueImage from '../assets/barbecue.png';
 import mangLarrysImage from '../assets/MLs.png';
 import redTakImage from '../assets/redtak.png';
 import globeLumpiaImage from '../assets/globe.png';
+
+// Helper function to calculate vendor rating
+const calculateVendorRating = async (vendorId) => {
+  try {
+    const reviewsSnap = await getDocs(
+      query(
+        collection(db, 'reviews'),
+        where('vendorId', '==', vendorId)
+      )
+    );
+
+    if (reviewsSnap.empty) {
+      return { rating: 0, reviewCount: 0 };
+    }
+
+    let totalRating = 0;
+    let count = 0;
+
+    reviewsSnap.forEach(doc => {
+      const reviewData = doc.data();
+      if (reviewData.rating && typeof reviewData.rating === 'number') {
+        totalRating += reviewData.rating;
+        count++;
+      }
+    });
+
+    const averageRating = count > 0 ? parseFloat((totalRating / count).toFixed(1)) : 0;
+    
+    return {
+      rating: averageRating,
+      reviewCount: count
+    };
+  } catch (error) {
+    console.error(`Error calculating rating for vendor ${vendorId}:`, error);
+    return { rating: 0, reviewCount: 0 };
+  }
+};
 
 const HomePage = () => {
   const [searchText, setSearchText] = useState('');
@@ -65,8 +102,23 @@ const HomePage = () => {
       setLoadingRecommendations(true);
       
       try {
-        const engine = new RecommendationEngine(currentUser.uid);
-        const recs = await engine.getRecommendations(3);
+        // Build a lightweight userContext for contextual scoring (time, rush hour)
+        const hour = new Date().getHours();
+        const timeSlot = (hour >= 6 && hour < 11) ? 'breakfast'
+                       : (hour >= 11 && hour < 15) ? 'lunch'
+                       : (hour >= 17 && hour < 23) ? 'dinner'
+                       : 'other';
+        const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
+
+        const userContext = {
+          time: timeSlot,
+          isRushHour,
+          // You can add weather, budget, or other signals here if available
+        };
+
+        const engine = new RecommendationEngine(currentUser.uid, userContext);
+        // Optionally enable debug during testing: engine.settings.debug = true;
+        const recs = await engine.getRecommendations(3, { includeDiversity: true, explorationRate: 0.2 });
         console.log('AI Recommendations received:', recs);
         setRecommendations(recs);
       } catch (err) {
@@ -80,18 +132,43 @@ const HomePage = () => {
     fetchRecommendations();
   }, [currentUser, refreshTrigger]);
 
-  // Fetch all vendors
+  // Fetch all vendors with ratings
   useEffect(() => {
     const fetchAllVendors = async () => {
       setLoadingVendors(true);
       try {
+        // Fetch vendors
         const vendorsSnapshot = await getDocs(collection(db, 'vendor_list'));
         const vendors = vendorsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        console.log('All vendors loaded:', vendors.length);
-        setAllVendors(vendors);
+
+        console.log(`Fetching ratings for ${vendors.length} vendors...`);
+
+        // Enrich with ratings in batches
+        const batchSize = 10;
+        const enrichedVendors = [];
+        
+        for (let i = 0; i < vendors.length; i += batchSize) {
+          const batch = vendors.slice(i, i + batchSize);
+          
+          const enrichedBatch = await Promise.all(
+            batch.map(async (vendor) => {
+              const { rating, reviewCount } = await calculateVendorRating(vendor.id);
+              return {
+                ...vendor,
+                rating,
+                reviewCount
+              };
+            })
+          );
+          
+          enrichedVendors.push(...enrichedBatch);
+        }
+
+        console.log('All vendors loaded with ratings:', enrichedVendors.length);
+        setAllVendors(enrichedVendors);
       } catch (error) {
         console.error('Error fetching vendors:', error);
         setAllVendors([]);
@@ -536,14 +613,38 @@ const HomePage = () => {
       return <div style={styles.loadingText}>Loading recommendations...</div>;
     }
 
+    // Helper to resolve rating from recommendation or fallback to the master vendor list
+    const resolveRating = (rec) => {
+      // Try several common fields on the recommendation object
+      const possible = rec.rating ?? rec.averageRating ?? rec.ratingValue ?? rec.stars;
+      if (typeof possible === 'number' && !Number.isNaN(possible) && possible > 0) return possible;
+
+      // Fallback: look up in allVendors state by id
+      const match = allVendors.find(v => v.id === (rec.id || rec.vendorId));
+      if (match && typeof match.rating === 'number') return match.rating;
+
+      // Still not found — return 0
+      return 0;
+    };
+
     const displayRecommendations = recommendations.length > 0 
-      ? recommendations.map(vendor => ({
-          id: vendor.id,
-          name: vendor.businessName || vendor.name || 'Unknown Vendor',
-          distance: vendor.distance ? `${vendor.distance.toFixed(1)}km` : 'N/A',
-          rating: vendor.rating || 0,
-          image: vendor.imageURL || vendor.imageUrl || vendor.image || mangLarrysImage
-        }))
+      ? recommendations.map(vendor => {
+          // Support new engine output while remaining backward compatible
+          const score = vendor.recommendationScore ?? vendor.score ?? 0;
+          const reasons = vendor.recommendationReasons ?? vendor.reasons ?? [];
+          const id = vendor.id || vendor.vendorId;
+          const resolvedRating = resolveRating(vendor);
+
+          return ({
+            id,
+            name: vendor.businessName || vendor.name || 'Unknown Vendor',
+            distance: (typeof vendor.distance === 'number') ? `${vendor.distance.toFixed(1)}km` : (vendor.distance || 'N/A'),
+            rating: resolvedRating,
+            image: vendor.imageURL || vendor.imageUrl || vendor.image || mangLarrysImage,
+            reasons,
+            score
+          });
+        })
       : fallbackRecommended;
 
     return (
@@ -580,7 +681,22 @@ const HomePage = () => {
                   </svg>
                   <span style={styles.ratingValue}>{place.rating}</span>
                 </div>
+                {/* Confidence score from recommendation engine */}
+                {place.score !== undefined && (
+                  <div style={{marginLeft: '8px', fontSize: '12px', color: '#6b7280'}}>
+                    {typeof place.score === 'number' ? `${(place.score).toFixed(1)}` : place.score}
+                    <span style={{fontSize: '11px', color: '#9ca3af', marginLeft: '4px'}}>confidence</span>
+                  </div>
+                )}
               </div>
+              {/* Recommendation reasons (chips) */}
+              {place.reasons && place.reasons.length > 0 && (
+                <div style={{display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap'}}>
+                  {place.reasons.slice(0, 3).map((r, i) => (
+                    <span key={i} style={{background: '#f3f4f6', color: '#374151', padding: '4px 8px', borderRadius: '999px', fontSize: '11px'}}>{r}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
