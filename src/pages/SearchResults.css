@@ -38,9 +38,18 @@
   font-weight: 700;
   color: #2d2e2f;
   margin: 0;
+  text-align: center;
+  flex-grow: 1;
 }
 
-/* Vendor List */
+/* Main Content Container */
+.search-results-container {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
 .vendors-list {
   padding: 0;
   background-color: #f0f2f5;
@@ -50,7 +59,9 @@
 
 .message {
   text-align: center;
-  flex-grow: 1;
+  color: #666;
+  font-size: 1rem;
+  padding: 20px;
 }
 
 .message.error {
@@ -223,4 +234,54 @@
   text-align: center;
   color: #70757a;
   padding: 40px;
+}
+
+/* Status Badge Styles (Add if not already present) */
+.status-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.status-badge.active {
+  background-color: #dcfce7; /* Green tint */
+  color: #166534; /* Dark green text */
+  border: 1px solid #bbf7d0; /* Lighter green border */
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2; /* Red tint */
+  color: #991b1b; /* Dark red text */
+  border: 1px solid #fecaca; /* Lighter red border */
+}
+
+/* Container for category and status */
+.vendor-meta-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Space between items */
+  margin-top: 0.5rem; /* Space above */
+  margin-bottom: 0.5rem; /* Space below */
+  flex-wrap: wrap; /* Allow wrapping */
+}
+
+.dot-separator {
+  color: #9ca3af; /* Light gray */
+}
+
+/* Optional: Style for inactive cards if you choose to show them dimmed */
+.vendor-card.inactive {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none; /* Disable clicks */
+}
+.vendor-card.inactive:hover {
+   transform: none; /* Disable hover effect */
+   box-shadow: none;
+   border-color: #e5e7eb; /* Reset border */
 }

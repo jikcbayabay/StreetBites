@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { auth } from './services/firebase';
@@ -32,6 +31,7 @@ import AdminUserManagement from './pages/AdminUserManagement';
 import AdminVendors from './pages/AdminVendors';
 import AdminRequests from './pages/AdminRequests';
 import AdminLogs from './pages/AdminLogs';
+import AddBusiness from './pages/addBusiness'; // Ensure this path is correct
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAuthenticated, isLoading }) => {
@@ -101,230 +101,129 @@ function App() {
           {/* Redirect root ("/") to login page */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           
-          {/* Public Authentication routes - redirect to home if already logged in */}
+          {/* Public Authentication routes */}
           <Route 
             path="/login" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <LoginPage />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><LoginPage /></PublicRoute>} 
           />
           <Route 
             path="/admin-login" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminLogin />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminLogin /></PublicRoute>} 
           />
           <Route 
             path="/user-login" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <UserLogin />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><UserLogin /></PublicRoute>} 
           />
           <Route 
             path="/vendor-login" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <VendorLogin />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorLogin /></PublicRoute>} 
           />
           <Route 
             path="/admin-sign" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminSignup />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminSignup /></PublicRoute>} 
           />
           <Route 
             path="/user-sign" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <UserSignup />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><UserSignup /></PublicRoute>} 
           />
           <Route 
             path="/vendor-signup" 
-            element={
-              <PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <VendorSignup />
-              </PublicRoute>
-            } 
+            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorSignup /></PublicRoute>} 
           />
 
-          {/* Protected Main app routes - require authentication */}
+          {/* Protected Main app routes */}
           <Route 
             path="/home" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <HomePage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><HomePage /></ProtectedRoute>} 
           />
           <Route 
             path="/profile" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <ProfilePage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><ProfilePage /></ProtectedRoute>} 
           />
           <Route 
             path="/search/:category" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <SearchResultsPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><SearchResultsPage /></ProtectedRoute>} 
           />
           <Route 
             path="/maps" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <MapsPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><MapsPage /></ProtectedRoute>} 
           />
           <Route 
             path="/favorites" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <Favorites />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><Favorites /></ProtectedRoute>} 
           />
           <Route 
             path="/menu/:vendorId" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <MenuPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><MenuPage /></ProtectedRoute>} 
           />
           <Route 
             path="/vendor/:vendorId" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <VendorProfilePage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorProfilePage /></ProtectedRoute>} 
           />
           <Route 
             path="/vendor/:vendorId/review" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <WriteReviewPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><WriteReviewPage /></ProtectedRoute>} 
           />
 
           {/* Protected Settings and info routes */}
           <Route 
             path="/account" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AccountPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AccountPage /></ProtectedRoute>} 
           />
           <Route 
             path="/email-settings" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <EmailSettingsPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><EmailSettingsPage /></ProtectedRoute>} 
           />
           <Route 
             path="/security" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <SecurityPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><SecurityPage /></ProtectedRoute>} 
           />
           <Route 
             path="/faq" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <FAQPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><FAQPage /></ProtectedRoute>} 
           />
           <Route 
             path="/privacy-policy" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <PrivacyPolicyPage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><PrivacyPolicyPage /></ProtectedRoute>} 
           />
           <Route 
             path="/terms-of-service" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <TermsOfServicePage />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><TermsOfServicePage /></ProtectedRoute>} 
           />
 
-          {/* Protected Vendor dashboard */}
+          {/* Protected Vendor dashboard and Add Business */}
           <Route 
             path="/vendor-dashboard" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <VendorDashboard />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorDashboard /></ProtectedRoute>} 
           />
+          {/* ----- THIS IS THE MISSING ROUTE ----- */}
+          <Route 
+            path="/add-business" 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AddBusiness /></ProtectedRoute>} 
+          />
+          {/* ----- END OF MISSING ROUTE ----- */}
+
 
           {/* Protected Admin dashboard routes */}
           <Route 
             path="/admin-dashboard" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminDashboard /></ProtectedRoute>} 
           />
           <Route 
             path="/admin-users" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminUserManagement />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminUserManagement /></ProtectedRoute>} 
           />
           <Route 
             path="/admin-vendors" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminVendors />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminVendors /></ProtectedRoute>} 
           />
           <Route 
             path="/admin-requests" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminRequests />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminRequests /></ProtectedRoute>} 
           />
           <Route 
             path="/admin-logs" 
-            element={
-              <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-                <AdminLogs />
-              </ProtectedRoute>
-            } 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminLogs /></ProtectedRoute>} 
           />
         </Routes>
       </BrowserRouter>
@@ -333,3 +232,4 @@ function App() {
 }
 
 export default App;
+

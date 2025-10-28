@@ -53,7 +53,7 @@ const ProfilePage = () => {
   ];
 
   const infoItems = [
-    { label: 'Apply as Vendor', path: '/vendor-signup', external: false },
+    { label: 'Apply as Vendor', path: '/vendor-signup', external: true },
     { label: 'FAQ', path: '/faq', external: true },
     { label: 'Terms of Service', path: '/terms-of-service', external: false },
     { label: 'Privacy Policy', path: '/privacy-policy', external: false }

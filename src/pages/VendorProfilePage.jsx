@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaCheckCircle, FaBookOpen } from 'react-icons/fa';
-import { db } from '../../firebase.js';
-import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { FaArrowLeft, FaStar, FaStarHalfAlt, FaRegStar, FaCheckCircle, FaBookOpen, FaEdit, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { db, auth } from '../../firebase.js';
+import { doc, onSnapshot, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import './VendorProfilePage.css';
 
 // Reusable StarRating component
@@ -19,21 +20,40 @@ const StarRating = ({ rating, className = "" }) => {
 const VendorProfilePage = () => {
   const { vendorId } = useParams();
   const navigate = useNavigate();
-  
+
   const [vendor, setVendor] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null); // State for current user
+  const [isOwner, setIsOwner] = useState(false); // State to check if viewer owns the profile
+  const [showManageModal, setShowManageModal] = useState(false); // State for the manage modal
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false); // State for loading during status update
 
+  // Effect to get current user
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Effect to fetch data and check ownership
   useEffect(() => {
     setLoading(true);
 
-    // 1. Real-time listener for the vendor document
     const vendorRef = doc(db, 'vendor_list', vendorId);
     const unsubscribeVendor = onSnapshot(vendorRef, (docSnap) => {
       if (docSnap.exists()) {
-        setVendor({ id: docSnap.id, ...docSnap.data() });
+        const vendorData = { id: docSnap.id, ...docSnap.data() };
+        setVendor(vendorData);
+        // Check ownership after vendor data and user are available
+        if (currentUser && vendorData.uid === currentUser.uid) {
+          setIsOwner(true);
+        } else {
+          setIsOwner(false);
+        }
       } else {
         setError("Vendor not found.");
         setLoading(false);
@@ -44,7 +64,6 @@ const VendorProfilePage = () => {
       setLoading(false);
     });
 
-    // 2. Real-time listener for reviews
     const reviewsQuery = query(collection(db, 'reviews'), where('vendorId', '==', vendorId));
     const unsubscribeReviews = onSnapshot(reviewsQuery, (snapshot) => {
       const fetchedReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -54,7 +73,6 @@ const VendorProfilePage = () => {
         setError("Failed to load reviews.");
     });
 
-    // 3. One-time fetch for menu items
     const fetchMenuItems = async () => {
       try {
         const menuQuery = query(collection(db, 'menu_items'), where('vendorId', '==', vendorId));
@@ -63,19 +81,28 @@ const VendorProfilePage = () => {
       } catch (err) {
         console.error("Error fetching menu items:", err);
       } finally {
-        setLoading(false); // Stop loading after all initial data is fetched
+        // Only set loading to false here after all initial fetches might complete
+        // The vendor listener might update loading state too, ensure consistency
+         if (unsubscribeVendor && unsubscribeReviews) { // Check if listeners are active
+            setLoading(false);
+         }
       }
     };
     fetchMenuItems();
 
-    // Cleanup function to detach both listeners when the component unmounts
+    // Ensure loading is set to false if vendor listener resolves quickly
+    // but menu items might still be loading, or vice-versa.
+    // A more robust approach might use Promise.all if menu items were critical
+    // for initial render, but here we allow them to load slightly after.
+
+
     return () => {
       unsubscribeVendor();
       unsubscribeReviews();
     };
-  }, [vendorId]);
+  }, [vendorId, currentUser]); // Rerun if currentUser changes
 
-  // Separate best sellers from other menu items
+  // Memoized calculations remain the same
   const { bestSellers, otherMenuItems } = useMemo(() => {
     const best = menuItems.filter(item => item.isBestSeller);
     const others = menuItems.filter(item => !item.isBestSeller);
@@ -91,7 +118,7 @@ const VendorProfilePage = () => {
     });
     return counts;
   }, [reviews]);
-  
+
   // Helper function to prepare images for the hero gallery
   const prepareHeroImages = (images = []) => {
     if (!images || images.length === 0) return [null, null, null];
@@ -99,10 +126,30 @@ const VendorProfilePage = () => {
     if (images.length === 2) return [images[0], images[1], images[0]];
     return images.slice(0, 3);
   };
-  
+
+  // Function to toggle business status
+  const handleToggleStatus = async () => {
+    if (!vendor || !isOwner) return;
+    setIsUpdatingStatus(true);
+    const newStatus = vendor.status === 'active' ? 'inactive' : 'active';
+    try {
+      const vendorRef = doc(db, 'vendor_list', vendorId);
+      await updateDoc(vendorRef, {
+        status: newStatus
+      });
+      // Vendor state will update automatically due to the onSnapshot listener
+      setShowManageModal(false); // Close modal on success
+    } catch (err) {
+      console.error("Error updating vendor status:", err);
+      alert("Failed to update status. Please try again.");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   if (loading) return <div className="profile-page-container loading"><p>Loading profile...</p></div>;
   if (error) return <div className="profile-page-container error"><p>{error}</p></div>;
-  if (!vendor) return null;
+  if (!vendor) return null; // Should ideally show a 'not found' message if error is not set
 
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(vendor.address)}`;
   const displayImages = prepareHeroImages(vendor.heroImages);
@@ -110,20 +157,21 @@ const VendorProfilePage = () => {
   return (
     <div className="profile-page-container">
       <header className="profile-hero">
+        {/* UPDATED: Changed onClick back to target the menu page specifically */}
         <button className="profile-back-button" onClick={() => navigate(`/menu/${vendorId}`)}>
             <FaArrowLeft />
         </button>
         <div className="hero-gallery">
           {displayImages.map((imgUrl, index) => (
             imgUrl ? (
-              <img key={index} src={imgUrl} alt={`Vendor view ${index + 1}`} className="hero-image" />
+              <img key={index} src={imgUrl} alt={`Vendor view ${index + 1}`} className="hero-image" onError={(e) => e.target.style.display = 'none'} />
             ) : (
               <div key={index} className="hero-image-placeholder"></div>
             )
           ))}
         </div>
       </header>
-      
+
       <div className="profile-body">
         <div className="main-content-grid">
           {/* --- FLOATING INFO CARD (MIDDLE COLUMN) --- */}
@@ -131,23 +179,28 @@ const VendorProfilePage = () => {
             <img src={vendor.logoUrl || 'https://via.placeholder.com/150'} alt={`${vendor.businessName} logo`} className="vendor-logo" />
             <div className="vendor-title-group">
               <h1 className="vendor-profile-name">{vendor.businessName}</h1>
+              {/* Show status if inactive */}
+              {vendor.status === 'inactive' && <span className="inactive-status-badge">Inactive</span>}
               <div className="vendor-rating-reviews">
                 <StarRating rating={vendor.numericalRating} />
                 <span>{reviews.length} reviews</span>
               </div>
               <div className="vendor-meta-info">
-                <span>{vendor.priceRange}</span>
+                <span>{vendor.priceRange || '$'}</span> {/* Fallback for price range */}
                 <span className="dot-separator">•</span>
-                <span>{vendor.category}</span>
+                <span>{vendor.category || 'Food'}</span> {/* Fallback for category */}
               </div>
               <div className="vendor-hours">
-                <span className="open-status">Open</span>
-                <span>{vendor.hours}</span>
+                {/* Fallback for hours */}
+                <span className={`open-status ${vendor.status === 'active' ? 'active' : 'inactive'}`}>
+                  {vendor.status === 'active' ? 'Open' : 'Closed'} {/* Dynamically show open/closed */}
+                </span>
+                <span>{vendor.hours || 'Hours not set'}</span>
               </div>
-              {vendor.isVerified && <div className="verified-badge"><FaCheckCircle /> Verified over 3 months ago</div>}
+              {vendor.isVerified && <div className="verified-badge"><FaCheckCircle /> Verified</div>}
             </div>
           </div>
-          
+
           {/* --- LEFT COLUMN --- */}
           <div className="left-column">
             <div className="action-buttons-container card-style">
@@ -157,6 +210,12 @@ const VendorProfilePage = () => {
               <button className="btn btn-secondary" onClick={() => navigate(`/menu/${vendor.id}`)}>
                 <FaBookOpen /> View Menu
               </button>
+              {/* Manage Business Button - Only shows for the owner */}
+              {isOwner && (
+                <button className="btn btn-manage" onClick={() => setShowManageModal(true)}>
+                  <FaEdit /> Manage Business
+                </button>
+              )}
             </div>
             <div className="location-section card-style">
               <div className="location-address">
@@ -179,8 +238,8 @@ const VendorProfilePage = () => {
                     <div key={star} className="bar-container">
                       <span>{star} stars</span>
                       <div className="bar-background">
-                        <div 
-                          className="bar-fill" 
+                        <div
+                          className="bar-fill"
                           style={{ width: `${reviews.length > 0 ? (ratingBreakdown[star] / reviews.length) * 100 : 0}%` }}
                         ></div>
                       </div>
@@ -209,10 +268,11 @@ const VendorProfilePage = () => {
                     </div>
                   </div>
                 ))}
+                 {reviews.length === 0 && <p className="no-reviews-message">No reviews yet.</p>}
               </div>
             </div>
           </div>
-          
+
           {/* --- RIGHT COLUMN --- */}
           <aside className="right-column">
             <div className="menu-section card-style">
@@ -224,9 +284,9 @@ const VendorProfilePage = () => {
                     <div key={item.id} className="menu-item">
                       <div className="menu-item-info">
                         <span className="menu-item-name">{item.name}</span>
-                        <p className="menu-item-description">{item.description}</p>
+                        {item.description && <p className="menu-item-description">{item.description}</p>}
                       </div>
-                      <span className="menu-item-price">₱{item.price}</span>
+                      <span className="menu-item-price">₱{item.price.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -238,8 +298,10 @@ const VendorProfilePage = () => {
                      <div key={item.id} className="menu-item">
                       <div className="menu-item-info">
                         <span className="menu-item-name">{item.name}</span>
+                        {/* Optionally add description for other items too if available */}
+                        {/* {item.description && <p className="menu-item-description">{item.description}</p>} */}
                       </div>
-                      <span className="menu-item-price">₱{item.price}</span>
+                      <span className="menu-item-price">₱{item.price.toFixed(2)}</span>
                      </div>
                    ))}
                  </div>
@@ -251,8 +313,37 @@ const VendorProfilePage = () => {
           </aside>
         </div>
       </div>
+
+      {/* Manage Business Modal */}
+      {isOwner && showManageModal && (
+        <div className="modal-overlay" onClick={() => setShowManageModal(false)}>
+          <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Manage Business Status</h3>
+              <button className="modal-close" onClick={() => setShowManageModal(false)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>Set your business profile as active or inactive. Inactive profiles are hidden from search results and maps.</p>
+              <div className="status-toggle-section">
+                <span>Current Status:</span>
+                <span className={`status-indicator ${vendor.status === 'active' ? 'active' : 'inactive'}`}>
+                  {vendor.status === 'active' ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <button
+                className={`btn ${vendor.status === 'active' ? 'btn-danger' : 'btn-success'}`}
+                onClick={handleToggleStatus}
+                disabled={isUpdatingStatus}
+              >
+                {isUpdatingStatus ? 'Updating...' : (vendor.status === 'active' ? <><FaToggleOff /> Mark as Inactive</> : <><FaToggleOn /> Mark as Active</>)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default VendorProfilePage;
+

@@ -150,3 +150,60 @@
   0%, 100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
   20%, 80% { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* Status Badge Styles (Add to MenuPage.css if needed) */
+.status-badge {
+  padding: 0.2rem 0.6rem; /* Smaller padding for header */
+  border-radius: 4px;
+  font-size: 0.7rem; /* Smaller font size */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  margin-left: 0.5rem; /* Space between name and badge */
+  vertical-align: middle; /* Align with text */
+}
+
+.status-badge.active {
+  background-color: #dcfce7; /* Green tint */
+  color: #166534; /* Dark green text */
+  border: 1px solid #86efac; /* Lighter green border */
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2; /* Red tint */
+  color: #991b1b; /* Dark red text */
+  border: 1px solid #fecaca; /* Lighter red border */
+}
+
+/* Ensure header title and badge align nicely */
+.vendor-name-title-clickable {
+  display: flex;
+  align-items: center; /* Align items vertically */
+  flex-grow: 1; /* Allow title section to take space */
+  justify-content: center; /* Center title and badge */
+  gap: 0.5rem; /* Space between title and potential badge */
+  text-align: center;
+  overflow: hidden; /* Prevent long names from breaking layout */
+}
+
+.vendor-name-title-clickable h1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis for very long names */
+    margin: 0; /* Remove default h1 margin */
+}
+
+/* Styles for inactive vendor message */
+.menu-page-container.inactive-vendor {
+    padding-top: 2rem; /* Add some padding */
+}
+.inactive-title {
+    opacity: 0.7; /* Dim the title */
+}
+.inactive-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 1.1rem;
+    color: #6b7280;
+}

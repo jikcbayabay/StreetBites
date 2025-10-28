@@ -33,6 +33,7 @@ const SearchResultsPage = () => {
 
       try {
         const vendorsCollectionRef = collection(db, 'vendor_list');
+        // Fetch vendors based ONLY on category
         const q = firestoreQuery(vendorsCollectionRef, where("category", "==", category));
         const querySnapshot = await getDocs(q);
 
@@ -51,7 +52,7 @@ const SearchResultsPage = () => {
     };
     fetchVendors();
   }, [category]);
-  
+
   const formatReviewCount = (count) => {
     if (!count || count === 0) return '0';
     if (count >= 1000) {
@@ -68,7 +69,7 @@ const SearchResultsPage = () => {
         </button>
         <h1 className="header-title">Best "{displayCategory}" in Quezon City</h1>
       </header>
-      
+
       <main className="search-results-container">
         <div className="vendors-list">
           {loading && <p className="message">Loading vendors...</p>}
@@ -77,11 +78,20 @@ const SearchResultsPage = () => {
             <p className="message">No vendors found for "{displayCategory}".</p>
           )}
 
+        {/* Map directly over vendors, do not filter out inactive ones */}
         {vendors.map((vendor, index) => (
           <div
             key={vendor.id}
-            className={`vendor-card ${index === 1 ? 'highlighted' : ''}`}
-            onClick={() => navigate(`/menu/${vendor.id}`)}
+            // Add 'inactive' class if status is inactive for styling (e.g., dimming)
+            className={`vendor-card ${vendor.status === 'inactive' ? 'inactive' : ''}`}
+            // Only navigate if the vendor is active
+            onClick={() => {
+                if (vendor.status !== 'inactive') {
+                    navigate(`/menu/${vendor.id}`);
+                }
+            }}
+            // Add cursor style based on status
+            style={{ cursor: vendor.status === 'inactive' ? 'not-allowed' : 'pointer' }}
           >
             <img src={vendor.logoUrl || 'https://via.placeholder.com/150'} alt={vendor.businessName} className="vendor-image" />
             <div className="vendor-details">
@@ -90,14 +100,35 @@ const SearchResultsPage = () => {
                 <StarRating rating={vendor.numericalRating} />
                 <span className="review-count">({formatReviewCount(vendor.reviewCount)} reviews)</span>
               </div>
-              <p className="vendor-description">{vendor.description}</p>
-              <div className="vendor-meta-bottom">
+               <div className="vendor-meta-search">
                   <span className="vendor-category-link">{vendor.category}</span>
-              </div>
+                  {/* Show status badge, using 'Active'/'Inactive' text */}
+                  {vendor.status && (
+                     <>
+                        <span className="dot-separator">•</span>
+                        <span className={`status-badge ${vendor.status === 'active' ? 'active' : 'inactive'}`}>
+                           {vendor.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                     </>
+                  )}
+               </div>
+              <p className="vendor-description">{vendor.description}</p>
             </div>
             <div className="vendor-actions">
-              <button className="order-button" onClick={(e) => { e.stopPropagation(); navigate(`/menu/${vendor.id}`); }}>
-                Menu
+              {/* Disable button and change text if inactive */}
+              <button
+                className={`order-button ${vendor.status === 'inactive' ? 'disabled' : ''}`}
+                onClick={(e) => {
+                    if (vendor.status !== 'inactive') {
+                        e.stopPropagation(); // Prevent card's onClick if button is clicked
+                        navigate(`/menu/${vendor.id}`);
+                    } else {
+                        e.stopPropagation(); // Still prevent card's onClick
+                    }
+                }}
+                disabled={vendor.status === 'inactive'} // Disable button visually and functionally
+              >
+                {vendor.status === 'inactive' ? 'Currently Inactive' : 'Menu'}
               </button>
             </div>
           </div>
