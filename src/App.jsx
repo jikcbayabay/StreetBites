@@ -121,7 +121,7 @@ function App() {
             element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorLogin /></PublicRoute>} 
           />
           <Route 
-            path="/admin-sign" 
+            path="/admin-signup" 
             element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminSignup /></PublicRoute>} 
           />
           <Route 
