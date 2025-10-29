@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from "../../firebase.js"; 
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
-import bcrypt from 'bcryptjs';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import './LoginPage.css';
 
 const AdminSignup = () => {
@@ -66,10 +65,25 @@ const AdminSignup = () => {
 
   const handleNext = (e) => {
     e.preventDefault();
+    
+    // Validate step 1 fields
+    const newErrors = {};
+    
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
     if (!validatePhoneNumber(formData.contactNumber)) {
-      setErrors({ contactNumber: 'Please enter a valid mobile number (09XX XXX XXXX)' });
+      newErrors.contactNumber = 'Please enter a valid mobile number (09XX XXX XXXX)';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    
     setErrors({});
     setStep(2);
   };
@@ -91,8 +105,8 @@ const AdminSignup = () => {
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
     }
-    if (!formData.contactNumber.trim()) {
-      newErrors.contactNumber = 'Contact number is required';
+    if (!validatePhoneNumber(formData.contactNumber)) {
+      newErrors.contactNumber = 'Please enter a valid mobile number';
     }
     if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
@@ -110,48 +124,41 @@ const AdminSignup = () => {
     setIsLoading(true);
 
     try {
-      // Check if email already has a pending request
-      const requestsRef = collection(db, 'admin_requests');
-      const q = query(requestsRef, where('email', '==', formData.email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const existingRequest = querySnapshot.docs[0].data();
-        if (existingRequest.status === 'pending') {
-          setErrors({ email: 'A request with this email is already pending approval' });
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Hash the password before storing
-      const hashedPassword = await bcrypt.hash(formData.password, 10);
-
-      // Create admin request in Firestore with proper field names
-      await addDoc(collection(db, 'admin_requests'), {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        contact_number: formData.contactNumber,
-        email: formData.email,
-         hashed_password: hashedPassword,
-        temp_password: formData.password, // Store temporarily for admin account creation
+      // Prepare the data object
+      const adminRequestData = {
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
+        contact_number: formData.contactNumber.replace(/\s/g, ''),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
         status: 'pending',
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: serverTimestamp()
+      };
+
+      // Log the data being sent (for debugging)
+      console.log('Submitting admin request with data:', {
+        ...adminRequestData,
+        password: '***hidden***'
       });
 
-      console.log('Admin request submitted successfully');
+      // Create admin request in Firestore
+      const docRef = await addDoc(collection(db, 'admin_requests'), adminRequestData);
+
+      console.log('Admin request submitted successfully with ID:', docRef.id);
       setShowSuccessPopup(true);
 
     } catch (error) {
       console.error('Admin request submission error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
       
       // Provide more specific error messages
       let errorMessage = 'Failed to submit request. ';
+      
       if (error.code === 'permission-denied') {
-        errorMessage += 'Permission denied. Please check your internet connection and try again.';
+        errorMessage = 'Unable to submit request. This may be due to a duplicate email or system configuration. Please try a different email or contact support.';
       } else if (error.code === 'unavailable') {
-        errorMessage += 'Service unavailable. Please check your internet connection.';
+        errorMessage = 'Service unavailable. Please check your internet connection.';
       } else if (error.message) {
         errorMessage += error.message;
       } else {
@@ -197,12 +204,13 @@ const AdminSignup = () => {
                     type="text"
                     id="firstName"
                     name="firstName"
-                    className="form-input"
+                    className={`form-input ${errors.firstName ? 'error' : ''}`}
                     placeholder="Juan"
                     value={formData.firstName}
                     onChange={handleChange}
                     required
                   />
+                  {errors.firstName && <span className="error-message">{errors.firstName}</span>}
                 </div>
 
                 <div className="form-group">
@@ -211,12 +219,13 @@ const AdminSignup = () => {
                     type="text"
                     id="lastName"
                     name="lastName"
-                    className="form-input"
+                    className={`form-input ${errors.lastName ? 'error' : ''}`}
                     placeholder="Dela Cruz"
                     value={formData.lastName}
                     onChange={handleChange}
                     required
                   />
+                  {errors.lastName && <span className="error-message">{errors.lastName}</span>}
                 </div>
 
                 <div className="form-group">
@@ -225,7 +234,7 @@ const AdminSignup = () => {
                     type="tel"
                     id="contactNumber"
                     name="contactNumber"
-                    className="form-input"
+                    className={`form-input ${errors.contactNumber ? 'error' : ''}`}
                     placeholder="09XX XXX XXXX"
                     value={formData.contactNumber}
                     onChange={handleChange}
@@ -239,7 +248,7 @@ const AdminSignup = () => {
             ) : (
               <form className="email-form" onSubmit={handleSubmit} noValidate>
                 {errors.general && (
-                  <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  <div className="error-message" style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#fee', borderRadius: '8px' }}>
                     {errors.general}
                   </div>
                 )}
@@ -250,7 +259,7 @@ const AdminSignup = () => {
                     type="email"
                     id="email"
                     name="email"
-                    className="form-input"
+                    className={`form-input ${errors.email ? 'error' : ''}`}
                     placeholder="admin@streetbites.com"
                     value={formData.email}
                     onChange={handleChange}
@@ -266,8 +275,8 @@ const AdminSignup = () => {
                     type="password"
                     id="password"
                     name="password"
-                    className="form-input"
-                    placeholder="Create a strong password"
+                    className={`form-input ${errors.password ? 'error' : ''}`}
+                    placeholder="Create a strong password (min. 8 characters)"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -297,7 +306,7 @@ const AdminSignup = () => {
         <div className="popup-overlay" onClick={closePopupAndRedirect}>
           <div className="popup-content" onClick={(e) => e.stopPropagation()}>
             <div className="popup-icon">✓</div>
-            <h2 className="popup-title">Request Confirmed</h2>
+            <h2 className="popup-title">Request Submitted</h2>
             <p className="popup-message">
               Your administrator access request has been submitted successfully. 
               You will be notified once an existing administrator reviews your request.

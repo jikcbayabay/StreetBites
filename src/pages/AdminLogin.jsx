@@ -6,7 +6,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import './LoginPage.css';
 
-const AdminLogin = ({ onBack }) => {
+const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -60,7 +60,7 @@ const AdminLogin = ({ onBack }) => {
     <div className="login-page">
       <div className="login-wrapper">
         <div className="login-hero">
-          <button className="back-btn" onClick={onBack}>← Back</button>
+          <button className="back-btn" onClick={() => navigate('/login')}>← Back</button>
           <h1 className="logo-title">Admin Login</h1>
           <p className="logo-subtitle">Access administrator dashboard</p>
           <p className="hero-description">
@@ -107,7 +107,7 @@ const AdminLogin = ({ onBack }) => {
 
           <div className="signup-section">
             <span className="signup-text">
-              Don’t have an account? <Link to="/admin-signup" className="signup-link">Sign Up</Link>
+              Don't have an account? <Link to="/admin-sign" className="signup-link">Sign Up</Link>
             </span>
           </div>
         </main>
