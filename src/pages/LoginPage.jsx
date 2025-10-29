@@ -1,28 +1,10 @@
 // src/pages/LoginPage.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import './LoginPage.css';
-import AdminLogin from './AdminLogin';
-import VendorLogin from './VendorLogin';
-import UserLogin from './UserLogin';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
-  const [loginType, setLoginType] = useState(null); // null, 'admin', 'vendor', 'user'
-
-  const handleBack = () => {
-    setLoginType(null);
-  };
-
-  // If a login type is selected, show that component
-  if (loginType === 'admin') {
-    return <AdminLogin onBack={handleBack} />;
-  }
-  if (loginType === 'vendor') {
-    return <VendorLogin onBack={handleBack} />;
-  }
-  if (loginType === 'user') {
-    return <UserLogin onBack={handleBack} />;
-  }
+  const navigate = useNavigate();
 
   // Main login selection page
   return (
@@ -42,21 +24,21 @@ const LoginPage = () => {
           <div className="login-buttons">
             <button 
               className="login-btn admin"
-              onClick={() => setLoginType('admin')}
+              onClick={() => navigate('/admin-login')}
             >
               <span className="btn-text">Login as Admin</span>
             </button>
 
             <button 
               className="login-btn vendor"
-              onClick={() => setLoginType('vendor')}
+              onClick={() => navigate('/vendor-login')}
             >
               <span className="btn-text">Login as Vendor</span>
             </button>
 
             <button 
               className="login-btn email"
-              onClick={() => setLoginType('user')}
+              onClick={() => navigate('/user-login')}
             >
               <span className="btn-text">Sign In with Email</span>
             </button>

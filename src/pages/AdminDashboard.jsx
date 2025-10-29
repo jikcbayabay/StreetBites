@@ -143,7 +143,7 @@ const AdminDashboard = () => {
 
         // Fetch recent user registrations
         const usersRef = collection(db, 'users');
-        const usersQuery = query(usersRef, orderBy('created_at', 'desc'), limit(5));
+        const usersQuery = query(usersRef, orderBy('created_at', 'desc'), limit(100));
         const usersSnapshot = await getDocs(usersQuery);
         
         usersSnapshot.forEach((doc) => {
@@ -166,7 +166,7 @@ const AdminDashboard = () => {
 
         // Fetch recent vendor profile updates
         const vendorsRef = collection(db, 'vendor_list');
-        const vendorsQuery = query(vendorsRef, orderBy('updated_at', 'desc'), limit(5));
+        const vendorsQuery = query(vendorsRef, orderBy('updated_at', 'desc'), limit(100));
         const vendorsSnapshot = await getDocs(vendorsQuery);
         
         vendorsSnapshot.forEach((doc) => {
@@ -190,7 +190,7 @@ const AdminDashboard = () => {
 
         // Fetch recent reviews
         const reviewsRef = collection(db, 'reviews');
-        const reviewsQuery = query(reviewsRef, orderBy('timestamp', 'desc'), limit(5));
+        const reviewsQuery = query(reviewsRef, orderBy('timestamp', 'desc'), limit(100));
         const reviewsSnapshot = await getDocs(reviewsQuery);
         
         for (const docSnapshot of reviewsSnapshot.docs) {
@@ -220,7 +220,7 @@ const AdminDashboard = () => {
         }
 
         activities.sort((a, b) => b.timestamp - a.timestamp);
-        setRecentActivities(activities.slice(0, 10));
+        setRecentActivities(activities.slice(0, 100));
       } catch (error) {
         console.error('Error fetching recent activities:', error);
       }
