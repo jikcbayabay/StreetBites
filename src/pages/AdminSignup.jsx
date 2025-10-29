@@ -133,7 +133,7 @@ const AdminSignup = () => {
         last_name: formData.lastName,
         contact_number: formData.contactNumber,
         email: formData.email,
-        hashed_password: hashedPassword,
+         hashed_password: hashedPassword,
         temp_password: formData.password, // Store temporarily for admin account creation
         status: 'pending',
         created_at: new Date(),
