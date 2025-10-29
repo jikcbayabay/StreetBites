@@ -86,17 +86,98 @@ const MenuPage = () => {
 
   // useEffect to check if the item is a favorite (no changes needed)
   useEffect(() => {
-    // ... favorite checking logic ...
+    let cancelled = false;
+    const checkFavorite = async () => {
+      try {
+        if (!currentUser) {
+          setIsFavorite(false);
+          setFavoriteId(null);
+          return;
+        }
+
+        const favQuery = query(
+          collection(db, 'favorites'),
+          where('userId', '==', currentUser.uid),
+          where('vendorId', '==', vendorId)
+        );
+        const favSnapshot = await getDocs(favQuery);
+        if (cancelled) return;
+        if (!favSnapshot.empty) {
+          const favDoc = favSnapshot.docs[0];
+          setIsFavorite(true);
+          setFavoriteId(favDoc.id);
+        } else {
+          setIsFavorite(false);
+          setFavoriteId(null);
+        }
+      } catch (err) {
+        console.error('Error checking favorite:', err);
+        // keep previous state if there's an error
+      }
+    };
+
+    checkFavorite();
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentUser, vendorId]);
 
   // useEffect for the pop-up timer (no changes needed)
   useEffect(() => {
-    // ... popup timer logic ...
+    if (!showPopup) return;
+    const timer = setTimeout(() => {
+      setShowPopup(false);
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [showPopup]);
 
   // Function to handle the favorite button click (no changes needed)
   const handleFavoriteToggle = async () => {
-    // ... favorite toggle logic ...
+    try {
+      if (!currentUser) {
+        setPopupMessage('Please log in to add favorites.');
+        setShowPopup(true);
+        return;
+      }
+
+      if (isFavorite) {
+        // Remove favorite
+        if (favoriteId) {
+          await deleteDoc(doc(db, 'favorites', favoriteId));
+        } else {
+          // fallback: try to find and delete
+          const favQuery = query(
+            collection(db, 'favorites'),
+            where('userId', '==', currentUser.uid),
+            where('vendorId', '==', vendorId)
+          );
+          const favSnapshot = await getDocs(favQuery);
+          if (!favSnapshot.empty) {
+            await deleteDoc(doc(db, 'favorites', favSnapshot.docs[0].id));
+          }
+        }
+        setIsFavorite(false);
+        setFavoriteId(null);
+        setPopupMessage('Removed from favorites');
+        setShowPopup(true);
+      } else {
+        // Add favorite
+        const newFavRef = await addDoc(collection(db, 'favorites'), {
+          userId: currentUser.uid,
+          vendorId,
+          createdAt: serverTimestamp(),
+        });
+        setIsFavorite(true);
+        setFavoriteId(newFavRef.id);
+        setPopupMessage('Added to favorites');
+        setShowPopup(true);
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      setPopupMessage('Failed to update favorites. Please try again.');
+      setShowPopup(true);
+    }
   };
 
   const handlePrev = () => setActiveIndex(prev => (prev > 0 ? prev - 1 : menuItems.length - 1));
