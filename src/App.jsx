@@ -31,7 +31,7 @@ import AdminUserManagement from './pages/AdminUserManagement';
 import AdminVendors from './pages/AdminVendors';
 import AdminRequests from './pages/AdminRequests';
 import AdminLogs from './pages/AdminLogs';
-import AddBusiness from './pages/addBusiness'; // Ensure this path is correct
+import AddBusiness from './pages/AddBusiness'; // Ensure this path is correct
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAuthenticated, isLoading }) => {
@@ -128,7 +128,7 @@ function App() {
           />
           <Route 
             path="/vendor-signup" 
-            element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorSignup /></PublicRoute>} 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><VendorSignup /></ProtectedRoute>} 
           />
 
           {/* Protected Main app routes */}
