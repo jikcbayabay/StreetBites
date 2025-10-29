@@ -32,6 +32,8 @@ import AdminVendors from './pages/AdminVendors';
 import AdminRequests from './pages/AdminRequests';
 import AdminLogs from './pages/AdminLogs';
 import AddBusiness from './pages/AddBusiness'; // Ensure this path is correct
+import AdminAnalytics from './pages/AdminAnalytics';
+import AdminVendorApplication from './pages/AdminVendorApplication';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, isAuthenticated, isLoading }) => {
@@ -224,6 +226,14 @@ function App() {
           <Route 
             path="/admin-logs" 
             element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminLogs /></ProtectedRoute>} 
+          />
+          <Route 
+            path="/admin-analytics" 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminAnalytics /></ProtectedRoute>} 
+          />
+          <Route 
+            path="/admin-vendor-application" 
+            element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><AdminVendorApplication /></ProtectedRoute>} 
           />
         </Routes>
       </BrowserRouter>

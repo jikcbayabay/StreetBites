@@ -22,7 +22,8 @@ import {
   Mail,
   Calendar,
   AlertCircle,
-  Phone
+  Phone,
+  FileText
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -107,6 +108,10 @@ const AdminRequests = () => {
       navigate('/admin-requests');
     } else if (tab === 'logs') {
       navigate('/admin-logs');
+    } else if (tab === 'analytics') {
+      navigate('/admin-analytics');
+    } else if (tab === 'vendor-applications') {
+      navigate('/admin-vendor-application');
     }
   };
 
@@ -329,13 +334,6 @@ const AdminRequests = () => {
               <span className="nav-label">Users</span>
             </button>
             <button
-              className={`nav-item ${activeTab === 'reviews' ? 'active' : ''}`}
-              onClick={() => handleNavigation('reviews')}
-            >
-              <Star size={20} className="nav-icon" />
-              <span className="nav-label">Reviews</span>
-            </button>
-            <button
               className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
               onClick={() => handleNavigation('analytics')}
             >
@@ -353,6 +351,13 @@ const AdminRequests = () => {
                   {requests.filter(r => r.status === 'pending').length}
                 </span>
               )}
+            </button>
+            <button
+              className="nav-item"
+              onClick={() => handleNavigation('vendor-applications')}
+            >
+              <FileText size={20} className="nav-icon" />
+              <span className="nav-label">Vendor Applications</span>
             </button>
             <button
               className={`nav-item ${activeTab === 'logs' ? 'active' : ''}`}

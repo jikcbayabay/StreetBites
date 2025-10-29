@@ -22,7 +22,8 @@ import {
   ChevronRight,
   Activity,
   Clock,
-  UserPlus
+  UserPlus,
+  FileText
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -332,6 +333,10 @@ const AdminUserManagement = () => {
       navigate('/admin-requests');
     } else if (tab === 'logs') {
       navigate('/admin-logs');
+    } else if (tab === 'analytics') {
+      navigate('/admin-analytics');
+    } else if (tab === 'vendor-applications') {
+      navigate('/admin-vendor-application');
     }
   };
 
@@ -388,13 +393,6 @@ const AdminUserManagement = () => {
             </button>
             <button
               className="nav-item"
-              onClick={() => handleNavigation('reviews')}
-            >
-              <Star size={20} className="nav-icon" />
-              <span className="nav-label">Reviews</span>
-            </button>
-            <button
-              className="nav-item"
               onClick={() => handleNavigation('analytics')}
             >
               <TrendingUp size={20} className="nav-icon" />
@@ -411,6 +409,13 @@ const AdminUserManagement = () => {
                   {pendingRequests}
                 </span>
               )}
+            </button>
+            <button
+              className="nav-item"
+              onClick={() => handleNavigation('vendor-applications')}
+            >
+              <FileText size={20} className="nav-icon" />
+              <span className="nav-label">Vendor Applications</span>
             </button>
             <button
               className="nav-item"

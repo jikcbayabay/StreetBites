@@ -21,7 +21,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Activity
+  Activity,
+  FileText
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -190,6 +191,10 @@ const AdminLogs = () => {
       navigate('/admin-requests');
     } else if (tab === 'logs') {
       navigate('/admin-logs');
+    } else if (tab === 'analytics') {
+      navigate('/admin-analytics');
+    } else if (tab === 'vendor-applications') {
+      navigate('/admin-vendor-application');
     }
   };
 
@@ -286,13 +291,6 @@ const AdminLogs = () => {
             </button>
             <button
               className="nav-item"
-              onClick={() => handleNavigation('reviews')}
-            >
-              <Star size={20} className="nav-icon" />
-              <span className="nav-label">Reviews</span>
-            </button>
-            <button
-              className="nav-item"
               onClick={() => handleNavigation('analytics')}
             >
               <TrendingUp size={20} className="nav-icon" />
@@ -309,6 +307,13 @@ const AdminLogs = () => {
                   {pendingRequests}
                 </span>
               )}
+            </button>
+            <button
+              className="nav-item"
+              onClick={() => handleNavigation('vendor-applications')}
+            >
+              <FileText size={20} className="nav-icon" />
+              <span className="nav-label">Vendor Applications</span>
             </button>
             <button
               className={`nav-item ${activeTab === 'logs' ? 'active' : ''}`}

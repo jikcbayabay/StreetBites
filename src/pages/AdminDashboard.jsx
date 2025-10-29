@@ -1,9 +1,9 @@
 // src/pages/AdminDashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase.js';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
   Store, 
@@ -22,7 +22,10 @@ import {
   CreditCard,
   Clock,
   FileText,
-  UserPlus
+  UserPlus,
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -33,6 +36,15 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [applications, setApplications] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
+  
+  // Pagination and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -98,6 +110,162 @@ const AdminDashboard = () => {
     fetchPendingRequests();
   }, []);
 
+  // Fetch vendor applications
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        const applicationsRef = collection(db, 'vendor_applications');
+        const q = query(applicationsRef, orderBy('appliedAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        
+        const applicationsData = [];
+        querySnapshot.forEach((docSnap) => {
+          applicationsData.push({
+            id: docSnap.id,
+            ...docSnap.data()
+          });
+        });
+        
+        setApplications(applicationsData);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+      }
+    };
+
+    fetchApplications();
+  }, []);
+
+  // Fetch recent activities
+  useEffect(() => {
+    const fetchRecentActivities = async () => {
+      try {
+        const activities = [];
+
+        // Fetch recent user registrations
+        const usersRef = collection(db, 'users');
+        const usersQuery = query(usersRef, orderBy('created_at', 'desc'), limit(5));
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        usersSnapshot.forEach((doc) => {
+          const userData = doc.data();
+          const userName = userData.role === 'vendor' 
+            ? userData.business_name || `${userData.first_name} ${userData.last_name}`
+            : `${userData.first_name} ${userData.last_name}`;
+          
+          activities.push({
+            id: doc.id,
+            type: userData.role === 'vendor' ? 'vendor_registration' : 'user_registration',
+            description: userData.role === 'vendor' 
+              ? `New vendor "${userName}" registered`
+              : `New user ${userName} joined`,
+            timestamp: userData.created_at?.toDate() || new Date(),
+            icon: userData.role === 'vendor' ? 'Store' : 'UserPlus',
+            color: userData.role === 'vendor' ? '#E84C3D' : '#3498db'
+          });
+        });
+
+        // Fetch recent vendor profile updates
+        const vendorsRef = collection(db, 'vendor_list');
+        const vendorsQuery = query(vendorsRef, orderBy('updated_at', 'desc'), limit(5));
+        const vendorsSnapshot = await getDocs(vendorsQuery);
+        
+        vendorsSnapshot.forEach((doc) => {
+          const vendorData = doc.data();
+          const businessName = vendorData.businessName || 'Unknown Vendor';
+          
+          const createdAt = vendorData.created_at?.toDate?.() || new Date(0);
+          const updatedAt = vendorData.updated_at?.toDate?.() || new Date(0);
+          
+          if (updatedAt.getTime() - createdAt.getTime() > 60000) {
+            activities.push({
+              id: doc.id,
+              type: 'vendor_update',
+              description: `Vendor "${businessName}" updated their profile`,
+              timestamp: updatedAt,
+              icon: 'Settings',
+              color: '#f39c12'
+            });
+          }
+        });
+
+        // Fetch recent reviews
+        const reviewsRef = collection(db, 'reviews');
+        const reviewsQuery = query(reviewsRef, orderBy('timestamp', 'desc'), limit(5));
+        const reviewsSnapshot = await getDocs(reviewsQuery);
+        
+        for (const docSnapshot of reviewsSnapshot.docs) {
+          const reviewData = docSnapshot.data();
+          
+          let vendorName = 'Unknown Vendor';
+          if (reviewData.vendorId) {
+            try {
+              const vendorDocRef = doc(db, 'vendor_list', reviewData.vendorId);
+              const vendorDoc = await getDoc(vendorDocRef);
+              if (vendorDoc.exists()) {
+                vendorName = vendorDoc.data().businessName || 'Unknown Vendor';
+              }
+            } catch (error) {
+              console.error('Error fetching vendor:', error);
+            }
+          }
+          
+          activities.push({
+            id: docSnapshot.id,
+            type: 'review',
+            description: `${reviewData.reviewerName || 'A user'} left a ${reviewData.rating}-star review for ${vendorName}`,
+            timestamp: reviewData.timestamp?.toDate() || new Date(),
+            icon: 'Star',
+            color: '#f1c40f'
+          });
+        }
+
+        activities.sort((a, b) => b.timestamp - a.timestamp);
+        setRecentActivities(activities.slice(0, 10));
+      } catch (error) {
+        console.error('Error fetching recent activities:', error);
+      }
+    };
+
+    fetchRecentActivities();
+  }, []);
+
+  // Filter and search activities
+  const filteredActivities = useMemo(() => {
+    let filtered = [...recentActivities];
+
+    if (searchQuery) {
+      filtered = filtered.filter(activity =>
+        activity.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(activity => {
+        if (roleFilter === 'vendor') {
+          return activity.type === 'vendor_registration' || activity.type === 'vendor_update';
+        } else if (roleFilter === 'user') {
+          return activity.type === 'user_registration';
+        } else if (roleFilter === 'review') {
+          return activity.type === 'review';
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [recentActivities, searchQuery, roleFilter]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, itemsPerPage]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -118,7 +286,35 @@ const AdminDashboard = () => {
       navigate('/admin-requests');
     } else if (tab === 'logs') {
       navigate('/admin-logs');
+    } else if (tab === 'analytics') {
+      navigate('/admin-analytics');
+    } else if (tab === 'vendor-applications') {
+      navigate('/admin-vendor-application');
     }
+  };
+
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 604800) {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days !== 1 ? 's' : ''} ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const stats = [
@@ -180,13 +376,6 @@ const AdminDashboard = () => {
               <span className="nav-label">Users</span>
             </button>
             <button
-              className={`nav-item ${activeTab === 'reviews' ? 'active' : ''}`}
-              onClick={() => handleNavigation('reviews')}
-            >
-              <Star size={20} className="nav-icon" />
-              <span className="nav-label">Reviews</span>
-            </button>
-            <button
               className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
               onClick={() => handleNavigation('analytics')}
             >
@@ -204,6 +393,13 @@ const AdminDashboard = () => {
                   {pendingRequests}
                 </span>
               )}
+            </button>
+            <button
+              className="nav-item"
+              onClick={() => handleNavigation('vendor-applications')}
+            >
+              <FileText size={20} className="nav-icon" />
+              <span className="nav-label">Vendor Applications</span>
             </button>
             <button
               className="nav-item"
@@ -254,12 +450,142 @@ const AdminDashboard = () => {
               {/* Recent Activity */}
               <div className="activity-section">
                 <h3 className="subsection-title">Recent Activity</h3>
-                <div className="activity-card">
-                  <div className="empty-state">
-                    <Activity size={48} strokeWidth={1.5} className="empty-icon" />
-                    <p className="empty-text">No recent activity</p>
-                    <p className="empty-subtext">Activity will appear here once vendors and users start interacting with the platform</p>
+                
+                {/* Search and Filters */}
+                <div className="activity-controls">
+                  <div className="search-box">
+                    <Search size={18} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search by description..."
+                      className="search-input"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
+                  
+                  <div className="filter-controls">
+                    <select
+                      className="filter-select"
+                      value={roleFilter}
+                      onChange={(e) => setRoleFilter(e.target.value)}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="vendor">Vendors</option>
+                      <option value="user">Users</option>
+                      <option value="review">Reviews</option>
+                    </select>
+                    
+                    <select
+                      className="filter-select"
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    >
+                      <option value="5">5 per page</option>
+                      <option value="10">10 per page</option>
+                      <option value="20">20 per page</option>
+                      <option value="50">50 per page</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="activity-card">
+                  {paginatedActivities.length > 0 ? (
+                    <>
+                      <div className="activity-list">
+                        {paginatedActivities.map((activity) => {
+                          const IconComponent = 
+                            activity.icon === 'Store' ? Store :
+                            activity.icon === 'UserPlus' ? UserPlus :
+                            activity.icon === 'Settings' ? Settings :
+                            activity.icon === 'Star' ? Star :
+                            Activity;
+
+                          return (
+                            <div key={activity.id} className="activity-item">
+                              <div 
+                                className="activity-icon" 
+                                style={{ backgroundColor: `${activity.color}15`, color: activity.color }}
+                              >
+                                <IconComponent size={20} strokeWidth={2} />
+                              </div>
+                              <div className="activity-content">
+                                <p className="activity-description">{activity.description}</p>
+                                <p className="activity-time">
+                                  {formatTimeAgo(activity.timestamp)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="pagination">
+                          <div className="pagination-info">
+                            Showing {startIndex + 1} to {Math.min(endIndex, filteredActivities.length)} of {filteredActivities.length} activities
+                          </div>
+                          
+                          <div className="pagination-buttons">
+                            <button
+                              className="pagination-btn"
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              disabled={currentPage === 1}
+                            >
+                              <ChevronLeft size={16} />
+                            </button>
+                            
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                              if (
+                                page === 1 ||
+                                page === totalPages ||
+                                (page >= currentPage - 1 && page <= currentPage + 1)
+                              ) {
+                                return (
+                                  <button
+                                    key={page}
+                                    className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+                                    onClick={() => handlePageChange(page)}
+                                  >
+                                    {page}
+                                  </button>
+                                );
+                              } else if (
+                                page === currentPage - 2 ||
+                                page === currentPage + 2
+                              ) {
+                                return <span key={page} className="pagination-ellipsis">...</span>;
+                              }
+                              return null;
+                            })}
+                            
+                            <button
+                              className="pagination-btn"
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                            >
+                              <ChevronRight size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <Activity size={48} strokeWidth={1.5} className="empty-icon" />
+                      <p className="empty-text">
+                        {searchQuery || roleFilter !== 'all' 
+                          ? 'No activities match your filters' 
+                          : 'No recent activity'}
+                      </p>
+                      <p className="empty-subtext">
+                        {searchQuery || roleFilter !== 'all'
+                          ? 'Try adjusting your search or filter criteria'
+                          : 'Activity will appear here once vendors and users start interacting with the platform'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
