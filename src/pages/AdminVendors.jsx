@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase.js';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
   Store, 
@@ -21,7 +21,11 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  FileText
+  FileText,
+  X,
+  MessageSquare,
+  Calendar,
+  Trash2
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -33,6 +37,14 @@ const AdminVendors = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [vendorReviews, setVendorReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [allReviews, setAllReviews] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -84,6 +96,20 @@ const AdminVendors = () => {
       const vendorListRef = collection(db, 'vendor_list');
       const vendorListSnapshot = await getDocs(vendorListRef);
       
+      // Fetch all reviews to calculate actual ratings
+      const reviewsRef = collection(db, 'reviews');
+      const reviewsSnapshot = await getDocs(reviewsRef);
+      
+      // Store all reviews for later use
+      const reviewsData = [];
+      reviewsSnapshot.forEach((reviewDoc) => {
+        reviewsData.push({
+          id: reviewDoc.id,
+          ...reviewDoc.data()
+        });
+      });
+      setAllReviews(reviewsData);
+      
       // Create a map of vendor listings by uid
       const vendorListMap = {};
       vendorListSnapshot.forEach((docSnap) => {
@@ -93,13 +119,35 @@ const AdminVendors = () => {
         }
       });
       
-      // Combine user data with vendor listing data
+      // Calculate ratings from reviews for each vendor
+      const vendorRatings = {};
+      reviewsData.forEach((reviewData) => {
+        const vendorId = reviewData.vendorId;
+        const rating = reviewData.rating;
+        
+        if (vendorId && rating) {
+          if (!vendorRatings[vendorId]) {
+            vendorRatings[vendorId] = { totalRating: 0, count: 0 };
+          }
+          vendorRatings[vendorId].totalRating += rating;
+          vendorRatings[vendorId].count += 1;
+        }
+      });
+      
+      // Combine user data with vendor listing data and calculated ratings
       const vendorsData = [];
       usersSnapshot.forEach((userDoc) => {
         const userData = userDoc.data();
         const vendorListing = vendorListMap[userDoc.id];
         
         if (vendorListing) {
+          const vendorId = vendorListing.id;
+          const ratingData = vendorRatings[vendorId];
+          const calculatedRating = ratingData 
+            ? ratingData.totalRating / ratingData.count 
+            : 0;
+          const reviewCount = ratingData ? ratingData.count : 0;
+          
           vendorsData.push({
             userId: userDoc.id,
             vendorId: vendorListing.id,
@@ -120,8 +168,9 @@ const AdminVendors = () => {
             neighborhood: vendorListing.neighborhood,
             phoneNumber: vendorListing.phoneNumber,
             priceRange: vendorListing.priceRange,
-            rating: vendorListing.rating,
-            reviewCount: vendorListing.reviewCount
+            // Use calculated rating from reviews
+            rating: calculatedRating,
+            reviewCount: reviewCount
           });
         }
       });
@@ -139,6 +188,104 @@ const AdminVendors = () => {
       alert('Error loading vendors: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewReviews = async (vendor) => {
+    setSelectedVendor(vendor);
+    setShowReviewsModal(true);
+    setLoadingReviews(true);
+    
+    try {
+      // Filter reviews for this vendor
+      const reviews = allReviews.filter(review => review.vendorId === vendor.vendorId);
+      
+      // Fetch reviewer names
+      const reviewsWithNames = await Promise.all(
+        reviews.map(async (review) => {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', review.userId));
+            const userData = userDoc.exists() ? userDoc.data() : {};
+            return {
+              ...review,
+              reviewerName: review.reviewerName || userData.first_name || userData.firstName || 'Anonymous',
+              reviewerAvatar: review.reviewerAvatarUrl || userData.avatarUrl || null
+            };
+          } catch (error) {
+            console.error('Error fetching reviewer data:', error);
+            return {
+              ...review,
+              reviewerName: review.reviewerName || 'Anonymous',
+              reviewerAvatar: review.reviewerAvatarUrl || null
+            };
+          }
+        })
+      );
+      
+      // Sort by timestamp (newest first)
+      reviewsWithNames.sort((a, b) => {
+        const dateA = a.timestamp?.toDate() || new Date(0);
+        const dateB = b.timestamp?.toDate() || new Date(0);
+        return dateB - dateA;
+      });
+      
+      setVendorReviews(reviewsWithNames);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleDeleteVendor = async () => {
+    if (!vendorToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // Delete vendor listing from vendor_list
+      await deleteDoc(doc(db, 'vendor_list', vendorToDelete.vendorId));
+      
+      // Delete user account from users collection
+      await deleteDoc(doc(db, 'users', vendorToDelete.userId));
+      
+      // Delete all reviews associated with this vendor
+      const vendorReviews = allReviews.filter(review => review.vendorId === vendorToDelete.vendorId);
+      await Promise.all(
+        vendorReviews.map(review => deleteDoc(doc(db, 'reviews', review.id)))
+      );
+      
+      // Log the action
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        await addDoc(collection(db, 'admin_logs'), {
+          action: 'delete',
+          targetType: 'vendor',
+          targetId: vendorToDelete.vendorId,
+          targetName: vendorToDelete.businessName,
+          performedBy: currentUser.uid,
+          performedByEmail: currentUser.email,
+          timestamp: serverTimestamp(),
+          details: {
+            vendorName: vendorToDelete.businessName,
+            vendorEmail: vendorToDelete.email,
+            reviewsDeleted: vendorReviews.length
+          }
+        });
+      }
+      
+      // Refresh vendor list
+      await fetchVendors();
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setVendorToDelete(null);
+      
+      alert('Vendor deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
+      alert('Error deleting vendor: ' + error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -186,6 +333,69 @@ const AdminVendors = () => {
       month: 'short', 
       day: 'numeric'
     });
+  };
+
+  const formatDateTime = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Star Rating Component
+  const StarRating = ({ rating, size = 16 }) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        // Full star
+        stars.push(
+          <Star 
+            key={i} 
+            size={size} 
+            style={{ color: '#f59e0b', fill: '#f59e0b' }} 
+          />
+        );
+      } else if (i === fullStars && hasHalfStar) {
+        // Half star
+        stars.push(
+          <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
+            <Star size={size} style={{ color: '#e5e7eb', fill: '#e5e7eb' }} />
+            <div style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              width: '50%', 
+              overflow: 'hidden' 
+            }}>
+              <Star size={size} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
+            </div>
+          </div>
+        );
+      } else {
+        // Empty star
+        stars.push(
+          <Star 
+            key={i} 
+            size={size} 
+            style={{ color: '#e5e7eb', fill: '#e5e7eb' }} 
+          />
+        );
+      }
+    }
+    
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+        {stars}
+      </div>
+    );
   };
 
   return (
@@ -486,18 +696,85 @@ const AdminVendors = () => {
                       </div>
 
                       {/* Rating & Reviews */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '1rem', borderTop: '1px solid #f0f0f0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Star size={16} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
-                          <span style={{ color: '#2d3748', fontWeight: '600', fontSize: '0.875rem' }}>
-                            {vendor.rating ? vendor.rating.toFixed(1) : 'N/A'}
-                          </span>
-                          <span style={{ color: '#718096', fontSize: '0.875rem' }}>
-                            ({vendor.reviewCount || 0} reviews)
-                          </span>
+                      <div style={{ paddingTop: '1rem', borderTop: '1px solid #f0f0f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            {vendor.rating > 0 ? (
+                              <>
+                                <StarRating rating={vendor.rating} size={16} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span style={{ color: '#2d3748', fontWeight: '600', fontSize: '0.875rem' }}>
+                                    {vendor.rating.toFixed(1)}
+                                  </span>
+                                  <span style={{ color: '#718096', fontSize: '0.875rem' }}>
+                                    ({vendor.reviewCount} {vendor.reviewCount === 1 ? 'review' : 'reviews'})
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                                No reviews yet
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ color: '#718096', fontSize: '0.75rem' }}>
+                            Joined {formatDate(vendor.createdAt)}
+                          </div>
                         </div>
-                        <div style={{ color: '#718096', fontSize: '0.75rem' }}>
-                          Joined {formatDate(vendor.createdAt)}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {vendor.reviewCount > 0 && (
+                            <button
+                              onClick={() => handleViewReviews(vendor)}
+                              style={{
+                                flex: 1,
+                                padding: '0.625rem 1rem',
+                                backgroundColor: '#f97316',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f97316'}
+                            >
+                              <MessageSquare size={16} />
+                              View Reviews
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setVendorToDelete(vendor);
+                              setShowDeleteModal(true);
+                            }}
+                            style={{
+                              flex: vendor.reviewCount > 0 ? 0 : 1,
+                              padding: '0.625rem 1rem',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '0.875rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                          >
+                            <Trash2 size={16} />
+                            {vendor.reviewCount > 0 ? '' : 'Delete Vendor'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -508,6 +785,333 @@ const AdminVendors = () => {
           </div>
         </main>
       </div>
+
+      {/* Reviews Modal */}
+      {showReviewsModal && selectedVendor && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.5rem', fontWeight: '600', color: '#1f2937' }}>
+                  Reviews for {selectedVendor.businessName}
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <StarRating rating={selectedVendor.rating} size={18} />
+                  <span style={{ color: '#4b5563', fontSize: '0.875rem' }}>
+                    {selectedVendor.rating.toFixed(1)} average from {selectedVendor.reviewCount} {selectedVendor.reviewCount === 1 ? 'review' : 'reviews'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowReviewsModal(false);
+                  setSelectedVendor(null);
+                  setVendorReviews([]);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6b7280',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '1.5rem'
+            }}>
+              {loadingReviews ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '3rem' }}>
+                  <Clock size={48} strokeWidth={1.5} style={{ color: '#9ca3af' }} />
+                </div>
+              ) : vendorReviews.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280' }}>
+                  <MessageSquare size={48} strokeWidth={1.5} style={{ margin: '0 auto 1rem', color: '#9ca3af' }} />
+                  <p style={{ margin: 0, fontSize: '1rem' }}>No reviews yet</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {vendorReviews.map((review) => (
+                    <div key={review.id} style={{
+                      padding: '1.5rem',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      {/* Review Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: review.reviewerAvatar 
+                              ? `url(${review.reviewerAvatar}) center/cover` 
+                              : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            flexShrink: 0
+                          }}>
+                            {!review.reviewerAvatar && (review.reviewerName?.charAt(0).toUpperCase() || 'A')}
+                          </div>
+                          <div>
+                            <h4 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: '600', color: '#1f2937' }}>
+                              {review.reviewerName}
+                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <StarRating rating={review.rating} size={14} />
+                              <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: '600' }}>
+                                {review.rating}.0
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', fontSize: '0.75rem' }}>
+                          <Calendar size={14} />
+                          <span>{formatDateTime(review.timestamp)}</span>
+                        </div>
+                      </div>
+
+                      {/* Review Tags */}
+                      {review.tags && review.tags.length > 0 && (
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                          {review.tags.map((tag, index) => (
+                            <span key={index} style={{
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af',
+                              padding: '0.25rem 0.625rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500'
+                            }}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Review Text */}
+                      {review.text && (
+                        <p style={{
+                          margin: 0,
+                          color: '#374151',
+                          fontSize: '0.9375rem',
+                          lineHeight: 1.6
+                        }}>
+                          {review.text}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && vendorToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            {/* Warning Icon */}
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#fee2e2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem'
+            }}>
+              <AlertCircle size={32} style={{ color: '#ef4444' }} />
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              margin: '0 0 0.75rem',
+              fontSize: '1.5rem',
+              fontWeight: '600',
+              color: '#1f2937',
+              textAlign: 'center'
+            }}>
+              Delete Vendor?
+            </h2>
+
+            {/* Description */}
+            <p style={{
+              margin: '0 0 0.5rem',
+              color: '#6b7280',
+              fontSize: '0.9375rem',
+              lineHeight: 1.6,
+              textAlign: 'center'
+            }}>
+              Are you sure you want to delete <strong>{vendorToDelete.businessName}</strong>?
+            </p>
+            
+            <p style={{
+              margin: '0 0 1.5rem',
+              color: '#ef4444',
+              fontSize: '0.875rem',
+              lineHeight: 1.6,
+              textAlign: 'center',
+              fontWeight: '500'
+            }}>
+              This will permanently delete the vendor account, listing, and all associated reviews. This action cannot be undone.
+            </p>
+
+            {/* Vendor Info Box */}
+            <div style={{
+              backgroundColor: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                <strong>Vendor:</strong> {vendorToDelete.businessName}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                <strong>Owner:</strong> {vendorToDelete.firstName} {vendorToDelete.lastName}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                <strong>Email:</strong> {vendorToDelete.email}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#4b5563' }}>
+                <strong>Reviews to delete:</strong> {vendorToDelete.reviewCount}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setVendorToDelete(null);
+                }}
+                disabled={isDeleting}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '0.9375rem',
+                  fontWeight: '600',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  transition: 'background-color 0.2s',
+                  opacity: isDeleting ? 0.5 : 1
+                }}
+                onMouseEnter={(e) => !isDeleting && (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                onMouseLeave={(e) => !isDeleting && (e.currentTarget.style.backgroundColor = 'white')}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteVendor}
+                disabled={isDeleting}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.9375rem',
+                  fontWeight: '600',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  transition: 'background-color 0.2s',
+                  opacity: isDeleting ? 0.7 : 1
+                }}
+                onMouseEnter={(e) => !isDeleting && (e.currentTarget.style.backgroundColor = '#dc2626')}
+                onMouseLeave={(e) => !isDeleting && (e.currentTarget.style.backgroundColor = '#ef4444')}
+              >
+                {isDeleting ? (
+                  <>
+                    <Clock size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Delete Vendor
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
